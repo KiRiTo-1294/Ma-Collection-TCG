@@ -956,21 +956,44 @@
     detailPanel.innerHTML = '';
   }
 
-  function buildSparkline(history) {
+  function buildSparkline(history, rate) {
     if (!history || history.length < 2) return '';
-    const values = history.map(h => Number(h.market_price ?? h.low_price ?? 0));
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-    const w = 460, h = 90, pad = 6;
-    const points = values.map((v, i) => {
-      const x = pad + (i / (values.length - 1)) * (w - pad * 2);
-      const y = h - pad - ((v - min) / range) * (h - pad * 2);
-      return x.toFixed(1) + ',' + y.toFixed(1);
-    }).join(' ');
+    const values = history.map(h => Number(h.market_price ?? h.low_price ?? 0) / rate);
+    const dates = history.map(h => new Date(h.recorded_at));
+
+    let min = Math.min(...values);
+    let max = Math.max(...values);
+    if (min === max) { min -= 1; max += 1; } // évite une division par zéro si tous les points sont égaux
+    const range = max - min;
+
+    const w = 460, h = 150;
+    const padLeft = 56, padRight = 10, padTop = 12, padBottom = 26;
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
+
+    const xAt = i => padLeft + (values.length === 1 ? 0 : (i / (values.length - 1)) * plotW);
+    const yAt = v => padTop + plotH - ((v - min) / range) * plotH;
+
+    const points = values.map((v, i) => xAt(i).toFixed(1) + ',' + yAt(v).toFixed(1)).join(' ');
+    const dots = values.map((v, i) => `<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="2.5" fill="var(--gold)"/>`).join('');
+
+    const yVals = [max, (max + min) / 2, min];
+    const gridAndLabels = yVals.map(v => {
+      const y = yAt(v);
+      return `<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${w - padRight}" y2="${y.toFixed(1)}" stroke="var(--border-soft)" stroke-width="1"/>
+              <text x="${padLeft - 8}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--text-fainter)" font-family="Inter, sans-serif">${formatEUR(v)} €</text>`;
+    }).join('');
+
+    const dateFmt = d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    const xIdx = values.length <= 3 ? values.map((_, i) => i) : [0, Math.floor((values.length - 1) / 2), values.length - 1];
+    const xLabels = xIdx.map(i => `<text x="${xAt(i).toFixed(1)}" y="${h - 6}" text-anchor="middle" font-size="10" fill="var(--text-fainter)" font-family="Inter, sans-serif">${dateFmt(dates[i])}</text>`).join('');
+
     return `
       <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;">
+        ${gridAndLabels}
         <polyline points="${points}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}
+        ${xLabels}
       </svg>`;
   }
 
@@ -1024,7 +1047,7 @@
 
           <div style="font-size:12px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;">Historique du prix marché</div>
           ${history.length >= 2
-            ? buildSparkline(history)
+            ? buildSparkline(history, rate)
             : `<div style="font-size:12.5px; color:var(--text-fainter);">Pas encore assez de données — l'historique se construit chaque semaine à partir de maintenant.</div>`
           }
 
