@@ -250,6 +250,16 @@
         </select>
       </label>
     </div>
+    <div class="row">
+      <label>
+        Langue
+        <select id="fLanguage" class="field-input">
+          <option value="EN">Anglais</option>
+          <option value="JP">Japonais</option>
+          <option value="FR">Français</option>
+        </select>
+      </label>
+    </div>
     <label>
       Valeur par carte (€)
       <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
@@ -290,7 +300,8 @@
         quantity: d.quantity,
         condition: d.condition,
         value: d.value,
-        imageUrl: d.image_url || ''
+        imageUrl: d.image_url || '',
+        language: d.language || 'EN'
       }));
       saveStateElSafe('');
     } catch (e) {
@@ -313,7 +324,8 @@
         quantity: card.quantity,
         condition: card.condition,
         value: card.value,
-        image_url: card.imageUrl || null
+        image_url: card.imageUrl || null,
+        language: card.language || 'EN'
       })
     });
     if (!res.ok) throw new Error('Erreur d\'ajout');
@@ -335,7 +347,8 @@
         quantity: card.quantity,
         condition: card.condition,
         value: card.value,
-        image_url: card.imageUrl || null
+        image_url: card.imageUrl || null,
+        language: card.language || 'EN'
       })
     });
     if (!res.ok) throw new Error('Erreur de modification');
@@ -466,7 +479,7 @@
   function render() {
     const query = searchInput.value.toLowerCase();
     const filtered = cards.filter(c =>
-      (c.name + ' ' + c.series + ' ' + c.cardNumber).toLowerCase().includes(query)
+      (c.name + ' ' + c.series + ' ' + c.cardNumber + ' ' + (c.language || '')).toLowerCase().includes(query)
     );
 
     const totalValue = cards.reduce((sum, c) => sum + (Number(c.value) || 0) * (Number(c.quantity) || 0), 0);
@@ -514,6 +527,7 @@
             ${c.series ? `<span>${svgLayers()} ${escapeHtml(c.series)}</span>` : ''}
             <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
             <span>${escapeHtml(c.condition)}</span>
+            <span style="color:var(--orange); font-weight:600;">${escapeHtml(c.language || 'EN')}</span>
           </div>
         </div>
         <div class="card-value">
@@ -604,6 +618,7 @@
     document.getElementById('fCondition').value = card.condition;
     document.getElementById('fValue').value = card.value;
     document.getElementById('fImageUrl').value = card.imageUrl || '';
+    document.getElementById('fLanguage').value = card.language || 'EN';
     formTitle.textContent = 'Modifier la carte';
     submitBtnText.textContent = 'Enregistrer les modifications';
     openForm();
@@ -645,7 +660,8 @@
       name, series, cardNumber,
       quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
       condition, value,
-      imageUrl: document.getElementById('fImageUrl').value || null
+      imageUrl: document.getElementById('fImageUrl').value || null,
+      language: document.getElementById('fLanguage').value
     };
 
     try {
@@ -661,7 +677,8 @@
             quantity: saved.quantity,
             condition: saved.condition,
             value: saved.value,
-            imageUrl: saved.image_url || ''
+            imageUrl: saved.image_url || '',
+            language: saved.language || 'EN'
           };
         }
       } else {
@@ -674,7 +691,8 @@
           quantity: saved.quantity,
           condition: saved.condition,
           value: saved.value,
-          imageUrl: saved.image_url || ''
+          imageUrl: saved.image_url || '',
+          language: saved.language || 'EN'
         });
       }
       closeFormReset();
