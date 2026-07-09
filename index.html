@@ -254,9 +254,9 @@
       <label>
         Langue
         <select id="fLanguage" class="field-input">
-          <option value="EN">Anglais</option>
-          <option value="JP">Japonais</option>
-          <option value="FR">Français</option>
+          <option value="EN">🇺🇸 Anglais</option>
+          <option value="JP">🇯🇵 Japonais</option>
+          <option value="FR">🇫🇷 Français</option>
         </select>
       </label>
     </div>
@@ -527,7 +527,7 @@
             ${c.series ? `<span>${svgLayers()} ${escapeHtml(c.series)}</span>` : ''}
             <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
             <span>${escapeHtml(c.condition)}</span>
-            <span style="color:var(--orange); font-weight:600;">${escapeHtml(c.language || 'EN')}</span>
+            <span style="color:var(--orange); font-weight:600;">${languageFlag(c.language)} ${escapeHtml(c.language || 'EN')}</span>
           </div>
         </div>
         <div class="card-value">
@@ -573,6 +573,12 @@
     const div = document.createElement('div');
     div.textContent = str == null ? '' : String(str);
     return div.innerHTML;
+  }
+
+  function languageFlag(lang) {
+    if (lang === 'JP') return '🇯🇵';
+    if (lang === 'FR') return '🇫🇷';
+    return '🇺🇸';
   }
 
   function svgHash() {
