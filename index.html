@@ -115,6 +115,7 @@
     display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px;
   }
   .submit-btn:active { background: var(--orange-hover); }
+  .suggest-item:hover, .suggest-item:active { background: var(--bg-panel); }
 
   .list { max-width: 720px; margin: 0 auto; padding: 4px 20px 60px; }
   .empty-state { text-align: center; padding: 56px 20px; color: var(--text-fainter); }
@@ -210,9 +211,10 @@
 <div class="form-panel">
   <form id="cardForm">
     <div id="formTitle" class="display-font" style="font-size: 19px; font-weight: 700; color: var(--orange); margin: 0 0 2px;">Ajouter une carte</div>
-    <label>
+    <label style="position: relative;">
       Nom de la carte
-      <input type="text" id="fName" class="field-input" placeholder="ex: Goku, Guerrier Saiyan">
+      <input type="text" id="fName" class="field-input" placeholder="ex: Energy Maker" autocomplete="off">
+      <div id="suggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:260px; overflow-y:auto; z-index:20;"></div>
     </label>
     <div class="row">
       <label>
@@ -257,6 +259,7 @@
   const SUPABASE_URL = 'https://kmopbbdlagtuogydqfws.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttb3BiYmRsYWd0dW9neWRxZndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTI0MjIsImV4cCI6MjA5OTE4ODQyMn0.UtuI-dsekzb78DYKXEEKxBe2EzDLmj2k37w1_1UsHIY';
   const CARDS_ENDPOINT = SUPABASE_URL + '/rest/v1/cards';
+  const CATALOG_ENDPOINT = SUPABASE_URL + '/rest/v1/card_catalog';
   const SB_HEADERS = {
     apikey: SUPABASE_ANON_KEY,
     Authorization: 'Bearer ' + SUPABASE_ANON_KEY
@@ -357,6 +360,86 @@
   const submitBtnText = document.getElementById('submitBtnText');
 
   let editingId = null;
+
+  // --- Autocomplétion depuis le catalogue ---
+  const fNameInput = document.getElementById('fName');
+  const suggestBox = document.getElementById('suggestBox');
+  let searchDebounce = null;
+  let activeSuggestions = [];
+
+  async function searchCatalog(query) {
+    if (!query || query.trim().length < 2) {
+      suggestBox.style.display = 'none';
+      return;
+    }
+    try {
+      const url = CATALOG_ENDPOINT + '?name=ilike.*' + encodeURIComponent(query.trim()) + '*&select=*&order=name&limit=8';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const data = await res.json();
+      activeSuggestions = data;
+      renderSuggestions(data);
+    } catch (e) {
+      suggestBox.style.display = 'none';
+    }
+  }
+
+  function renderSuggestions(items) {
+    if (!items || items.length === 0) {
+      suggestBox.style.display = 'none';
+      return;
+    }
+    suggestBox.innerHTML = items.map((item, i) => {
+      const price = item.market_price != null ? item.market_price : item.low_price;
+      const priceLabel = price != null ? '$' + Number(price).toFixed(2) : '—';
+      return `
+        <div class="suggest-item" data-index="${i}" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; gap:10px;">
+          <div style="min-width:0;">
+            <div style="font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(item.name)}</div>
+            <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">${escapeHtml(item.set_name)}${item.card_number ? ' · ' + escapeHtml(item.card_number) : ''}</div>
+          </div>
+          <div style="font-size:12px; color:var(--gold); flex-shrink:0; align-self:center;">${priceLabel}</div>
+        </div>`;
+    }).join('');
+    suggestBox.style.display = 'block';
+
+    suggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const item = activeSuggestions[Number(el.dataset.index)];
+        applySuggestion(item);
+      });
+      el.addEventListener('touchstart', (e) => {
+        const item = activeSuggestions[Number(el.dataset.index)];
+        applySuggestion(item);
+      }, { passive: true });
+    });
+  }
+
+  function applySuggestion(item) {
+    if (!item) return;
+    document.getElementById('fName').value = item.name;
+    document.getElementById('fSeries').value = item.set_name || '';
+    document.getElementById('fCardNumber').value = item.card_number || '';
+
+    const usdPrice = item.market_price != null ? item.market_price : item.low_price;
+    if (usdPrice != null) {
+      const rate = Number(rateInput.value) || 1.08;
+      const eurValue = usdPrice / rate;
+      document.getElementById('fValue').value = eurValue.toFixed(2);
+    }
+    suggestBox.style.display = 'none';
+  }
+
+  fNameInput.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    const q = fNameInput.value;
+    searchDebounce = setTimeout(() => searchCatalog(q), 300);
+  });
+
+  fNameInput.addEventListener('blur', () => {
+    setTimeout(() => { suggestBox.style.display = 'none'; }, 150);
+  });
 
   function formatEUR(n) {
     return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -486,6 +569,7 @@
     submitBtnText.textContent = 'Ajouter à la collection';
     cardForm.reset();
     document.getElementById('fQuantity').value = 1;
+    suggestBox.style.display = 'none';
   }
 
   function startEdit(card) {
