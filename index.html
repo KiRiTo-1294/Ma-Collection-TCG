@@ -116,6 +116,14 @@
   }
   .submit-btn:active { background: var(--orange-hover); }
   .suggest-item:hover, .suggest-item:active { background: var(--bg-panel); }
+  .thumb-wrap { position: relative; flex-shrink: 0; }
+  .thumb-zoom {
+    display: none; position: absolute; left: calc(100% + 8px); top: 50%;
+    transform: translateY(-50%); width: 160px; height: auto; border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.7); border: 1px solid var(--border);
+    z-index: 100; background: var(--bg-input);
+  }
+  .thumb-wrap:hover .thumb-zoom { display: block; }
 
   .list { max-width: 720px; margin: 0 auto; padding: 4px 20px 60px; }
   .empty-state { text-align: center; padding: 56px 20px; color: var(--text-fainter); }
@@ -399,7 +407,7 @@
       return `
         <div class="suggest-item" data-index="${i}" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; gap:10px;">
           ${item.image_url
-            ? `<img src="${item.image_url}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; flex-shrink:0; background:var(--bg-panel);">`
+            ? `<div class="thumb-wrap"><img src="${item.image_url}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; background:var(--bg-panel);"><img class="thumb-zoom" src="${item.image_url}" alt=""></div>`
             : `<div style="width:32px; height:44px; border-radius:4px; background:var(--bg-panel); flex-shrink:0;"></div>`
           }
           <div style="min-width:0; flex:1;">
@@ -495,7 +503,7 @@
       row.className = 'card-row';
       row.innerHTML = `
         ${c.imageUrl
-          ? `<img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--bg-input);">`
+          ? `<div class="thumb-wrap"><img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${c.imageUrl}" alt=""></div>`
           : `<div class="qty-badge">${c.quantity}</div>`
         }
         <div class="card-info">
