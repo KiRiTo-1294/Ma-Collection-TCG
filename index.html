@@ -147,10 +147,12 @@
   .card-value { text-align: right; flex-shrink: 0; }
   .card-value .total { font-size: 17px; font-weight: 700; color: var(--gold); }
   .card-value .unit { font-size: 11px; color: var(--text-fainter); }
-  .del-btn {
+  .del-btn, .edit-btn {
     background: none; border: none; padding: 10px; color: var(--text); opacity: 0.5;
   }
   .del-btn:active { opacity: 1; color: var(--red); }
+  .edit-btn:active { opacity: 1; color: var(--orange); }
+  .row-actions { display: flex; align-items: center; }
 
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -207,6 +209,7 @@
 
 <div class="form-panel">
   <form id="cardForm">
+    <div id="formTitle" class="display-font" style="font-size: 19px; font-weight: 700; color: var(--orange); margin: 0 0 2px;">Ajouter une carte</div>
     <label>
       Nom de la carte
       <input type="text" id="fName" class="field-input" placeholder="ex: Goku, Guerrier Saiyan">
@@ -241,9 +244,9 @@
       <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
     </label>
     <div class="form-error" id="formError" style="display:none;"></div>
-    <button type="submit" class="submit-btn">
+    <button type="submit" class="submit-btn" id="submitBtnLabel">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-      Ajouter à la collection
+      <span id="submitBtnText">Ajouter à la collection</span>
     </button>
   </form>
 </div>
@@ -304,6 +307,27 @@
     return data[0];
   }
 
+  async function updateCardInDb(id, card) {
+    const res = await fetch(CARDS_ENDPOINT + '?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, SB_HEADERS, {
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      }),
+      body: JSON.stringify({
+        name: card.name,
+        series: card.series,
+        card_number: card.cardNumber,
+        quantity: card.quantity,
+        condition: card.condition,
+        value: card.value
+      })
+    });
+    if (!res.ok) throw new Error('Erreur de modification');
+    const data = await res.json();
+    return data[0];
+  }
+
   async function deleteCardFromDb(id) {
     const res = await fetch(CARDS_ENDPOINT + '?id=eq.' + id, {
       method: 'DELETE',
@@ -329,6 +353,10 @@
   const rateWrap = document.getElementById('rateWrap');
   const rateInput = document.getElementById('rateInput');
   const saveStateEl = document.getElementById('saveState');
+  const formTitle = document.getElementById('formTitle');
+  const submitBtnText = document.getElementById('submitBtnText');
+
+  let editingId = null;
 
   function formatEUR(n) {
     return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -387,11 +415,23 @@
           <div class="total display-font">${formatEUR(c.value * c.quantity)} €</div>
           <div class="unit">${formatEUR(c.value)} € / unité</div>
         </div>
-        <button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer ${escapeHtml(c.name)}">
-          ${svgTrash()}
-        </button>
+        <div class="row-actions">
+          <button type="button" class="edit-btn" data-id="${c.id}" aria-label="Modifier ${escapeHtml(c.name)}">
+            ${svgPencil()}
+          </button>
+          <button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer ${escapeHtml(c.name)}">
+            ${svgTrash()}
+          </button>
+        </div>
       `;
       listContainer.appendChild(row);
+    });
+
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const card = cards.find(c => String(c.id) === String(btn.dataset.id));
+        if (card) startEdit(card);
+      });
     });
 
     document.querySelectorAll('.del-btn').forEach(btn => {
@@ -422,22 +462,58 @@
   function svgLayers() {
     return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
   }
+  function svgPencil() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
+  }
   function svgTrash() {
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
   }
 
+  function openForm() {
+    cardForm.classList.add('visible');
+    toggleFormBtn.classList.add('open');
+    toggleFormBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Fermer';
+    formError.style.display = 'none';
+    document.getElementById('fName').focus();
+  }
+
+  function closeFormReset() {
+    cardForm.classList.remove('visible');
+    toggleFormBtn.classList.remove('open');
+    toggleFormBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter';
+    editingId = null;
+    formTitle.textContent = 'Ajouter une carte';
+    submitBtnText.textContent = 'Ajouter à la collection';
+    cardForm.reset();
+    document.getElementById('fQuantity').value = 1;
+  }
+
+  function startEdit(card) {
+    editingId = card.id;
+    document.getElementById('fName').value = card.name;
+    document.getElementById('fSeries').value = card.series;
+    document.getElementById('fCardNumber').value = card.cardNumber;
+    document.getElementById('fQuantity').value = card.quantity;
+    document.getElementById('fCondition').value = card.condition;
+    document.getElementById('fValue').value = card.value;
+    formTitle.textContent = 'Modifier la carte';
+    submitBtnText.textContent = 'Enregistrer les modifications';
+    openForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   toggleFormBtn.addEventListener('click', () => {
-    const isVisible = cardForm.classList.toggle('visible');
+    const isVisible = cardForm.classList.contains('visible');
     if (isVisible) {
-      toggleFormBtn.classList.add('open');
-      toggleFormBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Fermer';
-      formError.style.display = 'none';
-      document.getElementById('fName').focus();
+      closeFormReset();
+      render();
     } else {
-      toggleFormBtn.classList.remove('open');
-      toggleFormBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter';
+      editingId = null;
+      formTitle.textContent = 'Ajouter une carte';
+      submitBtnText.textContent = 'Ajouter à la collection';
+      openForm();
+      render();
     }
-    render();
   });
 
   cardForm.addEventListener('submit', async (e) => {
@@ -457,26 +533,43 @@
     submitBtn.disabled = true;
     formError.style.display = 'none';
 
+    const payload = {
+      name, series, cardNumber,
+      quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
+      condition, value
+    };
+
     try {
-      const saved = await addCardToDb({
-        name, series, cardNumber,
-        quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
-        condition, value
-      });
-      cards.unshift({
-        id: saved.id,
-        name: saved.name,
-        series: saved.series || '',
-        cardNumber: saved.card_number || '',
-        quantity: saved.quantity,
-        condition: saved.condition,
-        value: saved.value
-      });
-      cardForm.reset();
-      document.getElementById('fQuantity').value = 1;
+      if (editingId) {
+        const saved = await updateCardInDb(editingId, payload);
+        const idx = cards.findIndex(c => String(c.id) === String(editingId));
+        if (idx !== -1) {
+          cards[idx] = {
+            id: saved.id,
+            name: saved.name,
+            series: saved.series || '',
+            cardNumber: saved.card_number || '',
+            quantity: saved.quantity,
+            condition: saved.condition,
+            value: saved.value
+          };
+        }
+      } else {
+        const saved = await addCardToDb(payload);
+        cards.unshift({
+          id: saved.id,
+          name: saved.name,
+          series: saved.series || '',
+          cardNumber: saved.card_number || '',
+          quantity: saved.quantity,
+          condition: saved.condition,
+          value: saved.value
+        });
+      }
+      closeFormReset();
       render();
     } catch (e) {
-      showError('Erreur lors de l\'ajout, vérifie ta connexion et réessaie.');
+      showError(editingId ? 'Erreur lors de la modification, réessaie.' : 'Erreur lors de l\'ajout, réessaie.');
     } finally {
       submitBtn.disabled = false;
     }
