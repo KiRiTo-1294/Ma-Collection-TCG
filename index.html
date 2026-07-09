@@ -251,8 +251,71 @@
 <div class="list" id="listContainer"></div>
 
 <script>
-  const STORAGE_KEY = 'dbz-collection';
-  let cards = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const SUPABASE_URL = 'https://kmopbbdlagtuogydqfws.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttb3BiYmRsYWd0dW9neWRxZndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTI0MjIsImV4cCI6MjA5OTE4ODQyMn0.UtuI-dsekzb78DYKXEEKxBe2EzDLmj2k37w1_1UsHIY';
+  const CARDS_ENDPOINT = SUPABASE_URL + '/rest/v1/cards';
+  const SB_HEADERS = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: 'Bearer ' + SUPABASE_ANON_KEY
+  };
+
+  let cards = [];
+
+  async function loadCards() {
+    saveStateElSafe('Chargement...');
+    try {
+      const res = await fetch(CARDS_ENDPOINT + '?select=*&order=id.desc', { headers: SB_HEADERS });
+      if (!res.ok) throw new Error('Erreur de chargement');
+      const data = await res.json();
+      cards = data.map(d => ({
+        id: d.id,
+        name: d.name,
+        series: d.series || '',
+        cardNumber: d.card_number || '',
+        quantity: d.quantity,
+        condition: d.condition,
+        value: d.value
+      }));
+      saveStateElSafe('');
+    } catch (e) {
+      saveStateElSafe('Erreur de connexion à la base de données.');
+    }
+    render();
+  }
+
+  async function addCardToDb(card) {
+    const res = await fetch(CARDS_ENDPOINT, {
+      method: 'POST',
+      headers: Object.assign({}, SB_HEADERS, {
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      }),
+      body: JSON.stringify({
+        name: card.name,
+        series: card.series,
+        card_number: card.cardNumber,
+        quantity: card.quantity,
+        condition: card.condition,
+        value: card.value
+      })
+    });
+    if (!res.ok) throw new Error('Erreur d\'ajout');
+    const data = await res.json();
+    return data[0];
+  }
+
+  async function deleteCardFromDb(id) {
+    const res = await fetch(CARDS_ENDPOINT + '?id=eq.' + id, {
+      method: 'DELETE',
+      headers: SB_HEADERS
+    });
+    if (!res.ok) throw new Error('Erreur de suppression');
+  }
+
+  function saveStateElSafe(msg) {
+    const el = document.getElementById('saveState');
+    if (el) el.textContent = msg;
+  }
 
   const toggleFormBtn = document.getElementById('toggleFormBtn');
   const cardForm = document.getElementById('cardForm');
@@ -269,12 +332,6 @@
 
   function formatEUR(n) {
     return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  function save() {
-    saveStateEl.textContent = 'Sauvegarde...';
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
-    setTimeout(() => { saveStateEl.textContent = 'Sauvegardé'; }, 150);
   }
 
   function render() {
@@ -338,10 +395,17 @@
     });
 
     document.querySelectorAll('.del-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        cards = cards.filter(c => c.id !== btn.dataset.id);
-        save();
-        render();
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        try {
+          await deleteCardFromDb(id);
+          cards = cards.filter(c => String(c.id) !== String(id));
+          render();
+        } catch (e) {
+          saveStateEl.textContent = 'Erreur lors de la suppression, réessaie.';
+          btn.disabled = false;
+        }
       });
     });
   }
@@ -376,7 +440,7 @@
     render();
   });
 
-  cardForm.addEventListener('submit', (e) => {
+  cardForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('fName').value.trim();
     const series = document.getElementById('fSeries').value.trim();
@@ -389,18 +453,33 @@
     if (!cardNumber) { showError('Le numéro de la carte est requis.'); return; }
     if (isNaN(value) || value < 0) { showError('Entre une valeur valide (ex: 4.50).'); return; }
 
-    cards.unshift({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      name, series, cardNumber,
-      quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
-      condition, value
-    });
-
-    save();
-    cardForm.reset();
-    document.getElementById('fQuantity').value = 1;
+    const submitBtn = cardForm.querySelector('.submit-btn');
+    submitBtn.disabled = true;
     formError.style.display = 'none';
-    render();
+
+    try {
+      const saved = await addCardToDb({
+        name, series, cardNumber,
+        quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
+        condition, value
+      });
+      cards.unshift({
+        id: saved.id,
+        name: saved.name,
+        series: saved.series || '',
+        cardNumber: saved.card_number || '',
+        quantity: saved.quantity,
+        condition: saved.condition,
+        value: saved.value
+      });
+      cardForm.reset();
+      document.getElementById('fQuantity').value = 1;
+      render();
+    } catch (e) {
+      showError('Erreur lors de l\'ajout, vérifie ta connexion et réessaie.');
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
   function showError(msg) {
@@ -415,7 +494,7 @@
   });
   rateInput.addEventListener('input', render);
 
-  render();
+  loadCards();
 </script>
 
 </body>
