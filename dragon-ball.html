@@ -494,6 +494,113 @@
     return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  const SET_PROGRESS_ENDPOINT = SUPABASE_URL + '/rest/v1/set_progress';
+  let allSeriesCache = null; // liste de toutes les séries connues (game, set_name, total_cards)
+  const catalogBySeriesCache = {}; // série -> liste de cartes du catalogue (chargée à la demande)
+  const missingItemLookup = {}; // tcg_product_id -> objet carte catalogue (pour le bouton +)
+
+  function buildOwnedRowHtml(c) {
+    return `
+      ${c.imageUrl
+        ? `<div class="thumb-wrap"><img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${c.imageUrl}" alt=""></div>`
+        : `<div class="qty-badge">${c.quantity}</div>`
+      }
+      <div class="card-info">
+        <div class="card-name">${escapeHtml(c.name)}</div>
+        <div class="card-meta">
+          <span>×${c.quantity}</span>
+          <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
+          <span>${escapeHtml(c.condition)}</span>
+          <span style="color:var(--orange); font-weight:600;">${languageFlag(c.language)} ${escapeHtml(c.language || 'EN')}</span>
+        </div>
+      </div>
+      <div class="card-value">
+        <div class="total display-font">${formatEUR(c.value * c.quantity)} €</div>
+        <div class="unit">${formatEUR(c.value)} € / unité</div>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="edit-btn" data-id="${c.id}" aria-label="Modifier ${escapeHtml(c.name)}">${svgPencil()}</button>
+        <button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer ${escapeHtml(c.name)}">${svgTrash()}</button>
+      </div>
+    `;
+  }
+
+  function buildMissingRowHtml(item) {
+    const rate = Number(rateInput.value) || 1.08;
+    const priceLabel = item.market_price != null ? formatEUR(item.market_price / rate) + ' €' : '—';
+    missingItemLookup[item.tcg_product_id] = item;
+    return `
+      <div class="card-row missing-row" style="opacity:0.55;">
+        ${item.image_url
+          ? `<div class="thumb-wrap"><img src="${item.image_url}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input); filter:grayscale(60%);"><img class="thumb-zoom" src="${item.image_url}" alt=""></div>`
+          : `<div class="qty-badge" style="background:var(--border-soft);"></div>`
+        }
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(item.name)}</div>
+          <div class="card-meta">
+            <span>${svgHash()} ${escapeHtml(item.card_number || '')}</span>
+          </div>
+        </div>
+        <div class="card-value">
+          <div class="total display-font" style="color:var(--text-fainter);">${priceLabel}</div>
+        </div>
+        <button type="button" class="quick-add-btn" data-productid="${item.tcg_product_id}" aria-label="Ajouter ${escapeHtml(item.name)}" style="background:none; border:1px solid var(--border); border-radius:6px; padding:8px; color:var(--orange); flex-shrink:0;">
+          ${svgPlus()}
+        </button>
+      </div>
+    `;
+  }
+
+  function svgPlus() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  }
+
+  async function toggleMissingSection(seriesKey, containerEl, toggleBtn) {
+    const isOpen = containerEl.style.display === 'block';
+    if (isOpen) {
+      containerEl.style.display = 'none';
+      toggleBtn.textContent = toggleBtn.dataset.openLabel;
+      return;
+    }
+    containerEl.style.display = 'block';
+    toggleBtn.textContent = 'Masquer';
+    if (containerEl.dataset.loaded) return;
+
+    containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Chargement...</div>`;
+    try {
+      let catalogRows = catalogBySeriesCache[seriesKey];
+      if (!catalogRows) {
+        const res = await fetch(CATALOG_ENDPOINT + '?set_name=eq.' + encodeURIComponent(seriesKey) + '&select=*&order=card_number&limit=1000', { headers: SB_HEADERS });
+        catalogRows = await res.json();
+        catalogBySeriesCache[seriesKey] = catalogRows;
+      }
+      const ownedIds = new Set(cards.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+      const missing = catalogRows.filter(item => !ownedIds.has(String(item.tcg_product_id)));
+
+      if (missing.length === 0) {
+        containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Tu as toutes les cartes connues de cette série 🎉</div>`;
+      } else {
+        containerEl.innerHTML = missing.map(buildMissingRowHtml).join('');
+        containerEl.querySelectorAll('.quick-add-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const item = missingItemLookup[btn.dataset.productid];
+            if (item) {
+              editingId = null;
+              formTitle.textContent = 'Ajouter une carte';
+              submitBtnText.textContent = 'Ajouter à la collection';
+              applySuggestion(item);
+              openForm();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          });
+        });
+      }
+      containerEl.dataset.loaded = '1';
+    } catch (e) {
+      containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Erreur de chargement.</div>`;
+    }
+  }
+
   function render() {
     const query = searchInput.value.toLowerCase();
     const filtered = cards.filter(c =>
@@ -525,55 +632,129 @@
       return;
     }
 
-    if (filtered.length === 0 && cards.length > 0) {
-      listContainer.innerHTML = `<div class="no-results">Aucune carte ne correspond à "${escapeHtml(searchInput.value)}".</div>`;
+    // Recherche active : liste plate filtrée (comportement simple et rapide)
+    if (query) {
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `<div class="no-results">Aucune carte ne correspond à "${escapeHtml(searchInput.value)}".</div>`;
+        return;
+      }
+      filtered.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        row.dataset.id = c.id;
+        row.style.cursor = 'pointer';
+        row.innerHTML = buildOwnedRowHtml(c);
+        listContainer.appendChild(row);
+      });
+      attachRowHandlers();
       return;
     }
 
-    filtered.forEach(c => {
-      const row = document.createElement('div');
-      row.className = 'card-row';
-      row.dataset.id = c.id;
-      row.style.cursor = 'pointer';
-      row.innerHTML = `
-        ${c.imageUrl
-          ? `<div class="thumb-wrap"><img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${c.imageUrl}" alt=""></div>`
-          : `<div class="qty-badge">${c.quantity}</div>`
-        }
-        <div class="card-info">
-          <div class="card-name">${escapeHtml(c.name)}</div>
-          <div class="card-meta">
-            <span>×${c.quantity}</span>
-            ${c.series ? `<span>${svgLayers()} ${escapeHtml(c.series)}</span>` : ''}
-            <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
-            <span>${escapeHtml(c.condition)}</span>
-            <span style="color:var(--orange); font-weight:600;">${languageFlag(c.language)} ${escapeHtml(c.language || 'EN')}</span>
-          </div>
-        </div>
-        <div class="card-value">
-          <div class="total display-font">${formatEUR(c.value * c.quantity)} €</div>
-          <div class="unit">${formatEUR(c.value)} € / unité</div>
-        </div>
-        <div class="row-actions">
-          <button type="button" class="edit-btn" data-id="${c.id}" aria-label="Modifier ${escapeHtml(c.name)}">
-            ${svgPencil()}
-          </button>
-          <button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer ${escapeHtml(c.name)}">
-            ${svgTrash()}
-          </button>
-        </div>
-      `;
-      listContainer.appendChild(row);
+    // Vue par défaut : regroupée par série
+    const bySeries = {};
+    cards.forEach(c => {
+      const key = c.series || '(Sans série)';
+      if (!bySeries[key]) bySeries[key] = [];
+      bySeries[key].push(c);
     });
 
-    document.querySelectorAll('.card-row').forEach(row => {
+    const seriesNames = Object.keys(bySeries).sort();
+    let html = '';
+
+    seriesNames.forEach(seriesName => {
+      const ownedCards = bySeries[seriesName];
+      const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
+      html += `
+        <div class="series-group" style="margin-bottom:18px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); font-weight:600;">
+              ${svgLayers()} ${escapeHtml(seriesName)}
+              <span style="color:var(--text-fainter); font-weight:400;">(${ownedCards.length} possédée${ownedCards.length > 1 ? 's' : ''})</span>
+            </div>
+            <button type="button" class="missing-toggle" data-series="${escapeHtml(seriesName)}" data-target="miss-${safeId}" data-open-label="Cartes manquantes" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Cartes manquantes</button>
+          </div>
+          <div class="owned-rows" data-series-rows="${safeId}"></div>
+          <div class="missing-rows" id="miss-${safeId}" style="display:none; margin-top:6px;"></div>
+        </div>
+      `;
+    });
+
+    listContainer.innerHTML = html;
+
+    seriesNames.forEach(seriesName => {
+      const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
+      const rowsContainer = listContainer.querySelector(`[data-series-rows="${safeId}"]`);
+      bySeries[seriesName].forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        row.dataset.id = c.id;
+        row.style.cursor = 'pointer';
+        row.innerHTML = buildOwnedRowHtml(c);
+        rowsContainer.appendChild(row);
+      });
+    });
+
+    attachRowHandlers();
+
+    listContainer.querySelectorAll('.missing-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        toggleMissingSection(btn.dataset.series, target, btn);
+      });
+    });
+
+    renderEmptySeriesSection();
+  }
+
+  async function renderEmptySeriesSection() {
+    try {
+      if (!allSeriesCache) {
+        const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*', { headers: SB_HEADERS });
+        allSeriesCache = await res.json();
+      }
+      const ownedSeries = new Set(cards.map(c => c.series).filter(Boolean));
+      const emptySeries = allSeriesCache.filter(sp => !ownedSeries.has(sp.set_name));
+      if (emptySeries.length === 0) return;
+
+      const wrap = document.createElement('div');
+      wrap.style.marginTop = '24px';
+      wrap.innerHTML = `<div style="font-size:12px; color:var(--text-fainter); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;">Séries que tu n'as pas encore commencées</div>`;
+
+      emptySeries.forEach(sp => {
+        const safeId = 'empty-' + btoa(unescape(encodeURIComponent(sp.set_name))).replace(/[^a-zA-Z0-9]/g, '');
+        const section = document.createElement('div');
+        section.style.marginBottom = '10px';
+        section.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; padding:11px 14px;">
+            <div style="font-size:13.5px; color:var(--text-faint);">${escapeHtml(sp.set_name)} <span style="color:var(--text-fainter);">(0 / ${sp.total_cards})</span></div>
+            <button type="button" class="missing-toggle" data-series="${escapeHtml(sp.set_name)}" data-target="${safeId}" data-open-label="Voir les cartes" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Voir les cartes</button>
+          </div>
+          <div class="missing-rows" id="${safeId}" style="display:none; margin-top:6px;"></div>
+        `;
+        wrap.appendChild(section);
+      });
+
+      listContainer.appendChild(wrap);
+      wrap.querySelectorAll('.missing-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.target);
+          toggleMissingSection(btn.dataset.series, target, btn);
+        });
+      });
+    } catch (e) {
+      // pas grave si ça échoue, la liste des séries vides est un bonus
+    }
+  }
+
+  function attachRowHandlers() {
+    listContainer.querySelectorAll('.card-row').forEach(row => {
       row.addEventListener('click', () => {
         const card = cards.find(c => String(c.id) === String(row.dataset.id));
         if (card) openDetail(card);
       });
     });
 
-    document.querySelectorAll('.edit-btn').forEach(btn => {
+    listContainer.querySelectorAll('.edit-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const card = cards.find(c => String(c.id) === String(btn.dataset.id));
@@ -581,7 +762,7 @@
       });
     });
 
-    document.querySelectorAll('.del-btn').forEach(btn => {
+    listContainer.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
