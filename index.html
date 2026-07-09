@@ -216,6 +216,7 @@
       <input type="text" id="fName" class="field-input" placeholder="ex: Energy Maker" autocomplete="off">
       <div id="suggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:260px; overflow-y:auto; z-index:20;"></div>
     </label>
+    <input type="hidden" id="fImageUrl" value="">
     <div class="row">
       <label>
         Série
@@ -280,7 +281,8 @@
         cardNumber: d.card_number || '',
         quantity: d.quantity,
         condition: d.condition,
-        value: d.value
+        value: d.value,
+        imageUrl: d.image_url || ''
       }));
       saveStateElSafe('');
     } catch (e) {
@@ -302,7 +304,8 @@
         card_number: card.cardNumber,
         quantity: card.quantity,
         condition: card.condition,
-        value: card.value
+        value: card.value,
+        image_url: card.imageUrl || null
       })
     });
     if (!res.ok) throw new Error('Erreur d\'ajout');
@@ -323,7 +326,8 @@
         card_number: card.cardNumber,
         quantity: card.quantity,
         condition: card.condition,
-        value: card.value
+        value: card.value,
+        image_url: card.imageUrl || null
       })
     });
     if (!res.ok) throw new Error('Erreur de modification');
@@ -393,12 +397,16 @@
       const price = item.market_price != null ? item.market_price : item.low_price;
       const priceLabel = price != null ? '$' + Number(price).toFixed(2) : '—';
       return `
-        <div class="suggest-item" data-index="${i}" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; gap:10px;">
-          <div style="min-width:0;">
+        <div class="suggest-item" data-index="${i}" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; gap:10px;">
+          ${item.image_url
+            ? `<img src="${item.image_url}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; flex-shrink:0; background:var(--bg-panel);">`
+            : `<div style="width:32px; height:44px; border-radius:4px; background:var(--bg-panel); flex-shrink:0;"></div>`
+          }
+          <div style="min-width:0; flex:1;">
             <div style="font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(item.name)}</div>
             <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">${escapeHtml(item.set_name)}${item.card_number ? ' · ' + escapeHtml(item.card_number) : ''}</div>
           </div>
-          <div style="font-size:12px; color:var(--gold); flex-shrink:0; align-self:center;">${priceLabel}</div>
+          <div style="font-size:12px; color:var(--gold); flex-shrink:0;">${priceLabel}</div>
         </div>`;
     }).join('');
     suggestBox.style.display = 'block';
@@ -421,6 +429,7 @@
     document.getElementById('fName').value = item.name;
     document.getElementById('fSeries').value = item.set_name || '';
     document.getElementById('fCardNumber').value = item.card_number || '';
+    document.getElementById('fImageUrl').value = item.image_url || '';
 
     const usdPrice = item.market_price != null ? item.market_price : item.low_price;
     if (usdPrice != null) {
@@ -485,10 +494,14 @@
       const row = document.createElement('div');
       row.className = 'card-row';
       row.innerHTML = `
-        <div class="qty-badge">${c.quantity}</div>
+        ${c.imageUrl
+          ? `<img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; flex-shrink:0; background:var(--bg-input);">`
+          : `<div class="qty-badge">${c.quantity}</div>`
+        }
         <div class="card-info">
           <div class="card-name">${escapeHtml(c.name)}</div>
           <div class="card-meta">
+            <span>×${c.quantity}</span>
             ${c.series ? `<span>${svgLayers()} ${escapeHtml(c.series)}</span>` : ''}
             <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
             <span>${escapeHtml(c.condition)}</span>
@@ -569,6 +582,7 @@
     submitBtnText.textContent = 'Ajouter à la collection';
     cardForm.reset();
     document.getElementById('fQuantity').value = 1;
+    document.getElementById('fImageUrl').value = '';
     suggestBox.style.display = 'none';
   }
 
@@ -580,6 +594,7 @@
     document.getElementById('fQuantity').value = card.quantity;
     document.getElementById('fCondition').value = card.condition;
     document.getElementById('fValue').value = card.value;
+    document.getElementById('fImageUrl').value = card.imageUrl || '';
     formTitle.textContent = 'Modifier la carte';
     submitBtnText.textContent = 'Enregistrer les modifications';
     openForm();
@@ -620,7 +635,8 @@
     const payload = {
       name, series, cardNumber,
       quantity: isNaN(quantity) || quantity < 1 ? 1 : quantity,
-      condition, value
+      condition, value,
+      imageUrl: document.getElementById('fImageUrl').value || null
     };
 
     try {
@@ -635,7 +651,8 @@
             cardNumber: saved.card_number || '',
             quantity: saved.quantity,
             condition: saved.condition,
-            value: saved.value
+            value: saved.value,
+            imageUrl: saved.image_url || ''
           };
         }
       } else {
@@ -647,7 +664,8 @@
           cardNumber: saved.card_number || '',
           quantity: saved.quantity,
           condition: saved.condition,
-          value: saved.value
+          value: saved.value,
+          imageUrl: saved.image_url || ''
         });
       }
       closeFormReset();
