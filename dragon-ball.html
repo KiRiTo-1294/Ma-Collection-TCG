@@ -178,7 +178,7 @@
         Tous les jeux
       </a>
       <span style="color:var(--border);">·</span>
-      <a href="progression.html" style="color:var(--orange); text-decoration:none; font-weight:600;">Progression par série</a>
+      <a href="progression.html?franchise=dragonball" style="color:var(--orange); text-decoration:none; font-weight:600;">Progression par série</a>
     </div>
     <div class="eyebrow">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFC857" stroke="#FFC857"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -309,7 +309,7 @@
   async function loadCards() {
     saveStateElSafe('Chargement...');
     try {
-      const res = await fetch(CARDS_ENDPOINT + '?select=*&order=id.desc', { headers: SB_HEADERS });
+      const res = await fetch(CARDS_ENDPOINT + '?select=*&game=eq.Dragon%20Ball&order=id.desc', { headers: SB_HEADERS });
       if (!res.ok) throw new Error('Erreur de chargement');
       const data = await res.json();
       cards = data.map(d => ({
@@ -347,7 +347,8 @@
         value: card.value,
         image_url: card.imageUrl || null,
         language: card.language || 'EN',
-        tcg_product_id: card.tcgProductId || null
+        tcg_product_id: card.tcgProductId || null,
+        game: 'Dragon Ball'
       })
     });
     if (!res.ok) throw new Error('Erreur d\'ajout');
@@ -371,7 +372,8 @@
         value: card.value,
         image_url: card.imageUrl || null,
         language: card.language || 'EN',
-        tcg_product_id: card.tcgProductId || null
+        tcg_product_id: card.tcgProductId || null,
+        game: 'Dragon Ball'
       })
     });
     if (!res.ok) throw new Error('Erreur de modification');
@@ -422,7 +424,7 @@
     }
     try {
       const q = encodeURIComponent(query.trim());
-      const url = CATALOG_ENDPOINT + '?or=(name.ilike.*' + q + '*,card_number.ilike.*' + q + '*)&select=*&order=name&limit=8';
+      const url = CATALOG_ENDPOINT + '?and=(or(name.ilike.*' + q + '*,card_number.ilike.*' + q + '*),game.ilike.*Dragon Ball*)&select=*&order=name&limit=8';
       const res = await fetch(url, { headers: SB_HEADERS });
       if (!res.ok) return;
       const data = await res.json();
@@ -715,7 +717,7 @@
   async function renderEmptySeriesSection() {
     try {
       if (!allSeriesCache) {
-        const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*', { headers: SB_HEADERS });
+        const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*&game=ilike.*Dragon Ball*', { headers: SB_HEADERS });
         allSeriesCache = await res.json();
       }
       const ownedSeries = new Set(cards.map(c => c.series).filter(Boolean));
