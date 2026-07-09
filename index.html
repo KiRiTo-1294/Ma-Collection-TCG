@@ -806,7 +806,7 @@
     }
 
     const rate = Number(rateInput.value) || 1.08;
-    const cardmarketUrl = 'https://www.cardmarket.com/en/DragonBallSuper/Cards?searchString=' + encodeURIComponent(card.name);
+    const cardmarketUrl = 'https://www.cardmarket.com/en/DragonBallSuper/Products/Singles';
 
     let priceSectionHtml = '';
     if (catalogRow) {
@@ -842,7 +842,7 @@
               ? `<a href="${catalogRow.tcgplayer_url}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--orange); color:var(--bg); font-weight:700; font-size:13.5px; text-decoration:none;">Voir sur TCGplayer</a>`
               : ''
             }
-            <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">Chercher sur Cardmarket</a>
+            <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">Ouvrir Cardmarket (recherche à faire toi-même)</a>
           </div>
         </div>
       `;
@@ -850,7 +850,7 @@
       priceSectionHtml = `
         <div style="background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:10px; padding:16px; margin-top:16px; font-size:13px; color:var(--text-faint);">
           Cette carte a été ajoutée manuellement (pas via la recherche du catalogue), donc aucune donnée de prix externe n'est disponible automatiquement.
-          <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:12px; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">Chercher sur Cardmarket</a>
+          <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:12px; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">Ouvrir Cardmarket (recherche à faire toi-même)</a>
         </div>
       `;
     }
