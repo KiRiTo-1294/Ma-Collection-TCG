@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Progression — Ma Collection Dragon Ball TCG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #191410; --bg-panel: #1D1712; --bg-input: #100C09;
+    --border: #3A2E20; --border-soft: #2E2419;
+    --text: #F5EDE3; --text-muted: #B8A88F; --text-faint: #8A7A63; --text-fainter: #6B5D48;
+    --orange: #FF7A29; --gold: #FFC857; --green: #6FCF97;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  .display-font { font-family: 'Saira Condensed', system-ui, sans-serif; }
+  a { color: inherit; }
+  button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
+
+  .header { padding: 26px 20px 20px; background: linear-gradient(180deg, #1F1712 0%, #191410 100%); border-bottom: 1px solid var(--border-soft); }
+  .inner { max-width: 720px; margin: 0 auto; }
+  .breadcrumb { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 13px; }
+  .breadcrumb a { color: var(--text-faint); text-decoration: none; display: flex; align-items: center; gap: 5px; }
+  h1 { font-size: clamp(26px, 7vw, 34px); font-weight: 800; margin: 0 0 4px; color: var(--orange); line-height: 1; }
+  .sub { font-size: 13px; color: var(--text-faint); }
+
+  .overall { max-width: 720px; margin: 18px auto 0; padding: 0 20px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .stat-box { background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; flex: 1 1 150px; }
+  .stat-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+
+  .content { max-width: 720px; margin: 0 auto; padding: 20px 20px 60px; }
+  .game-heading { font-size: 12px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; margin: 22px 0 10px; }
+  .game-heading:first-child { margin-top: 0; }
+
+  .set-row { background: var(--bg-panel); border: 1px solid var(--border-soft); border-radius: 10px; padding: 14px; margin-bottom: 8px; }
+  .set-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .set-name { font-weight: 600; font-size: 14.5px; }
+  .set-frac { font-size: 12.5px; color: var(--text-faint); flex-shrink: 0; }
+  .bar-track { height: 6px; background: var(--bg-input); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--orange); border-radius: 4px; }
+  .set-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px; color: var(--text-fainter); }
+
+  .checklist { display: none; margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 10px; }
+  .checklist.open { display: block; }
+  .check-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); }
+  .check-item:last-child { border-bottom: none; }
+  .check-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .check-name { flex: 1; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .check-price { font-size: 12px; color: var(--text-fainter); flex-shrink: 0; }
+
+  .loading, .empty { text-align: center; padding: 50px 20px; color: var(--text-fainter); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="inner">
+    <div class="breadcrumb">
+      <a href="dragon-ball.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Retour à ma collection
+      </a>
+    </div>
+    <h1 class="display-font">Progression par série</h1>
+    <div class="sub">Cartes obtenues vs. cartes manquantes, par set</div>
+  </div>
+</div>
+
+<div class="overall" id="overallStats"></div>
+
+<div class="content" id="content">
+  <div class="loading">Chargement...</div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://kmopbbdlagtuogydqfws.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttb3BiYmRsYWd0dW9neWRxZndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTI0MjIsImV4cCI6MjA5OTE4ODQyMn0.UtuI-dsekzb78DYKXEEKxBe2EzDLmj2k37w1_1UsHIY';
+  const SB_HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY };
+  const RATE = 1.08; // taux $ par € utilisé pour convertir les prix manquants
+
+  function formatEUR(n) {
+    return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  async function main() {
+    const contentEl = document.getElementById('content');
+    const overallEl = document.getElementById('overallStats');
+
+    let setProgress, myCards;
+    try {
+      const [spRes, cardsRes] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/set_progress?select=*', { headers: SB_HEADERS }),
+        fetch(SUPABASE_URL + '/rest/v1/cards?select=*', { headers: SB_HEADERS })
+      ]);
+      setProgress = await spRes.json();
+      myCards = await cardsRes.json();
+    } catch (e) {
+      contentEl.innerHTML = '<div class="empty">Erreur de chargement. Vérifie ta connexion et réessaie.</div>';
+      return;
+    }
+
+    if (!Array.isArray(setProgress) || setProgress.length === 0) {
+      contentEl.innerHTML = '<div class="empty">Le catalogue de séries n\'est pas encore disponible.</div>';
+      return;
+    }
+
+    // Regrouper mes cartes possédées par nom de série (le champ "series" correspond au set_name du catalogue)
+    const ownedBySet = {};
+    myCards.forEach(c => {
+      const key = c.series || '(sans série)';
+      if (!ownedBySet[key]) ownedBySet[key] = { count: 0, value: 0 };
+      ownedBySet[key].count += 1;
+      ownedBySet[key].value += (Number(c.value) || 0) * (Number(c.quantity) || 0);
+    });
+
+    // Stats globales
+    let totalOwnedUnique = 0, totalCards = 0, totalValue = 0;
+    setProgress.forEach(sp => {
+      totalCards += sp.total_cards;
+      const owned = ownedBySet[sp.set_name];
+      if (owned) { totalOwnedUnique += owned.count; totalValue += owned.value; }
+    });
+    const overallPct = totalCards > 0 ? Math.round((totalOwnedUnique / totalCards) * 100) : 0;
+
+    overallEl.innerHTML = `
+      <div class="stat-box">
+        <div class="stat-label">Complétion globale</div>
+        <div class="stat-value display-font" style="color:var(--gold);">${overallPct}%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Cartes uniques possédées</div>
+        <div class="stat-value display-font">${totalOwnedUnique} / ${totalCards}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Valeur totale</div>
+        <div class="stat-value display-font" style="color:var(--gold);">${formatEUR(totalValue)} €</div>
+      </div>
+    `;
+
+    // Regrouper les sets par jeu
+    const byGame = {};
+    setProgress.forEach(sp => {
+      if (!byGame[sp.game]) byGame[sp.game] = [];
+      byGame[sp.game].push(sp);
+    });
+
+    let html = '';
+    Object.keys(byGame).forEach(game => {
+      html += `<div class="game-heading">${escapeHtml(game)}</div>`;
+      byGame[game].forEach(sp => {
+        const owned = ownedBySet[sp.set_name] || { count: 0, value: 0 };
+        const pct = sp.total_cards > 0 ? Math.round((owned.count / sp.total_cards) * 100) : 0;
+        const setId = 'set-' + btoa(unescape(encodeURIComponent(sp.game + '::' + sp.set_name))).replace(/[^a-zA-Z0-9]/g, '');
+        html += `
+          <div class="set-row">
+            <div class="set-top" style="cursor:pointer;" data-toggle="${setId}">
+              <div class="set-name">${escapeHtml(sp.set_name)}</div>
+              <div class="set-frac">${owned.count} / ${sp.total_cards}</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
+            <div class="set-meta">
+              <span>${pct}% complété</span>
+              <span>${formatEUR(owned.value)} € possédés</span>
+            </div>
+            <div class="checklist" id="${setId}" data-game="${escapeHtml(sp.game)}" data-set="${escapeHtml(sp.set_name)}">
+              <div style="font-size:12.5px; color:var(--text-fainter);">Chargement de la liste...</div>
+            </div>
+          </div>
+        `;
+      });
+    });
+
+    contentEl.innerHTML = html;
+
+    document.querySelectorAll('[data-toggle]').forEach(el => {
+      el.addEventListener('click', async () => {
+        const id = el.dataset.toggle;
+        const panel = document.getElementById(id);
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) {
+          panel.classList.remove('open');
+          return;
+        }
+        panel.classList.add('open');
+        if (!panel.dataset.loaded) {
+          await loadChecklist(panel, myCards);
+        }
+      });
+    });
+  }
+
+  async function loadChecklist(panel, myCards) {
+    const game = panel.dataset.game;
+    const setName = panel.dataset.set;
+    try {
+      const url = SUPABASE_URL + '/rest/v1/card_catalog?game=eq.' + encodeURIComponent(game) +
+        '&set_name=eq.' + encodeURIComponent(setName) + '&select=*&order=card_number&limit=1000';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      const cards = await res.json();
+
+      const ownedIds = new Set(myCards.filter(c => c.tcg_product_id).map(c => String(c.tcg_product_id)));
+      const ownedByNameNum = new Set(myCards.map(c => (c.name + '::' + c.card_number).toLowerCase()));
+
+      panel.innerHTML = cards.map(c => {
+        const isOwned = ownedIds.has(String(c.tcg_product_id)) || ownedByNameNum.has((c.name + '::' + c.card_number).toLowerCase());
+        const priceLabel = c.market_price != null ? formatEUR(c.market_price / RATE) + ' €' : '';
+        return `
+          <div class="check-item">
+            <div class="check-dot" style="background:${isOwned ? 'var(--green)' : 'var(--border)'};"></div>
+            <div class="check-name" style="${isOwned ? '' : 'color:var(--text-fainter);'}">${escapeHtml(c.card_number || '')} ${escapeHtml(c.name)}</div>
+            ${!isOwned && priceLabel ? `<div class="check-price">${priceLabel}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+      panel.dataset.loaded = '1';
+    } catch (e) {
+      panel.innerHTML = '<div style="font-size:12.5px; color:var(--text-fainter);">Erreur de chargement de la liste.</div>';
+    }
+  }
+
+  main();
+</script>
+
+</body>
+</html>
