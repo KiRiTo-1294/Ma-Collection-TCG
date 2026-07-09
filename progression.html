@@ -60,12 +60,12 @@
 <div class="header">
   <div class="inner">
     <div class="breadcrumb">
-      <a href="dragon-ball.html">
+      <a id="backLink" href="dragon-ball.html">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         Retour à ma collection
       </a>
     </div>
-    <h1 class="display-font">Progression par série</h1>
+    <h1 class="display-font" id="pageTitle">Progression par série</h1>
     <div class="sub">Cartes obtenues vs. cartes manquantes, par set</div>
   </div>
 </div>
@@ -81,6 +81,16 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttb3BiYmRsYWd0dW9neWRxZndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTI0MjIsImV4cCI6MjA5OTE4ODQyMn0.UtuI-dsekzb78DYKXEEKxBe2EzDLmj2k37w1_1UsHIY';
   const SB_HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY };
   const RATE = 1.08; // taux $ par € utilisé pour convertir les prix manquants
+
+  const params = new URLSearchParams(window.location.search);
+  const franchise = params.get('franchise') === 'onepiece' ? 'onepiece' : 'dragonball';
+  const FRANCHISE_CONFIG = {
+    dragonball: { gameFilter: 'Dragon Ball', cardsGame: 'Dragon Ball', backHref: 'dragon-ball.html', title: 'Progression — Dragon Ball' },
+    onepiece: { gameFilter: 'One Piece', cardsGame: 'One Piece', backHref: 'one-piece.html', title: 'Progression — One Piece' }
+  };
+  const cfg = FRANCHISE_CONFIG[franchise];
+  document.getElementById('backLink').href = cfg.backHref;
+  document.getElementById('pageTitle').textContent = cfg.title;
 
   function formatEUR(n) {
     return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -98,8 +108,8 @@
     let setProgress, myCards;
     try {
       const [spRes, cardsRes] = await Promise.all([
-        fetch(SUPABASE_URL + '/rest/v1/set_progress?select=*', { headers: SB_HEADERS }),
-        fetch(SUPABASE_URL + '/rest/v1/cards?select=*', { headers: SB_HEADERS })
+        fetch(SUPABASE_URL + '/rest/v1/set_progress?select=*&game=ilike.*' + encodeURIComponent(cfg.gameFilter) + '*', { headers: SB_HEADERS }),
+        fetch(SUPABASE_URL + '/rest/v1/cards?select=*&game=eq.' + encodeURIComponent(cfg.cardsGame), { headers: SB_HEADERS })
       ]);
       setProgress = await spRes.json();
       myCards = await cardsRes.json();
