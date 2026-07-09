@@ -717,7 +717,7 @@
   async function renderEmptySeriesSection() {
     try {
       if (!allSeriesCache) {
-        const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*&game=ilike.*Dragon Ball*', { headers: SB_HEADERS });
+        const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*&game=ilike.*One Piece*', { headers: SB_HEADERS });
         allSeriesCache = await res.json();
       }
       const ownedSeries = new Set(cards.map(c => c.series).filter(Boolean));
