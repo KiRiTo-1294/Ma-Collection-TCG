@@ -238,7 +238,6 @@
       <input type="text" id="fName" class="field-input" placeholder="ex: Energy Maker ou E-75" autocomplete="off">
       <div id="suggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:260px; overflow-y:auto; z-index:20;"></div>
     </label>
-    <input type="hidden" id="fImageUrl" value="">
     <input type="hidden" id="fTcgProductId" value="">
     <div class="row">
       <label>
@@ -278,6 +277,11 @@
     <label>
       Valeur par carte (€)
       <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
+    </label>
+    <label>
+      URL de l'image (optionnel)
+      <input type="text" id="fImageUrl" class="field-input" placeholder="Colle un lien d'image ici (ex: depuis TCG Republic)">
+      <div style="font-size:11px; color:var(--text-fainter); margin-top:5px;">Clic droit sur l'image sur un autre site → "Copier l'adresse de l'image" → colle-la ici</div>
     </label>
     <div class="form-error" id="formError" style="display:none;"></div>
     <button type="submit" class="submit-btn" id="submitBtnLabel">
