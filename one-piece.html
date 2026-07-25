@@ -274,9 +274,23 @@
         </select>
       </label>
     </div>
+    <div class="row">
+      <label style="flex: 2;">
+        Valeur par carte
+        <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
+      </label>
+      <label style="flex: 1;">
+        Devise saisie
+        <select id="fCurrency" class="field-input">
+          <option value="EUR">€ Euros</option>
+          <option value="USD">$ Dollars</option>
+        </select>
+      </label>
+    </div>
+    <div style="font-size:11px; color:var(--text-fainter); margin-top:-8px; margin-bottom:2px;">Si tu choisis $, le montant est converti et sauvegardé en € automatiquement.</div>
     <label>
-      Valeur par carte (€)
-      <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
+      Tags (séparés par des virgules, optionnel)
+      <input type="text" id="fTags" class="field-input" placeholder="ex: Overlord, Albedo, SP">
     </label>
     <label>
       URL de l'image (optionnel)
@@ -326,7 +340,9 @@
         value: d.value,
         imageUrl: d.image_url || '',
         language: d.language || 'EN',
-        tcgProductId: d.tcg_product_id || null
+        tcgProductId: d.tcg_product_id || null,
+        tags: d.tags || [],
+        valueIsManual: d.value_is_manual !== false
       }));
       saveStateElSafe('');
     } catch (e) {
@@ -352,7 +368,9 @@
         image_url: card.imageUrl || null,
         language: card.language || 'EN',
         tcg_product_id: card.tcgProductId || null,
-        game: 'One Piece'
+        game: 'One Piece',
+        tags: card.tags || [],
+        value_is_manual: card.valueIsManual !== false
       })
     });
     if (!res.ok) throw new Error('Erreur d\'ajout');
@@ -377,7 +395,9 @@
         image_url: card.imageUrl || null,
         language: card.language || 'EN',
         tcg_product_id: card.tcgProductId || null,
-        game: 'One Piece'
+        game: 'One Piece',
+        tags: card.tags || [],
+        value_is_manual: card.valueIsManual !== false
       })
     });
     if (!res.ok) throw new Error('Erreur de modification');
@@ -414,6 +434,7 @@
   const submitBtnText = document.getElementById('submitBtnText');
 
   let editingId = null;
+  let isValueAutoFilled = false;
 
   // --- Autocomplétion depuis le catalogue ---
   const fNameInput = document.getElementById('fName');
@@ -482,15 +503,22 @@
     document.getElementById('fCardNumber').value = item.card_number || '';
     document.getElementById('fImageUrl').value = item.image_url || '';
     document.getElementById('fTcgProductId').value = item.tcg_product_id || '';
+    document.getElementById('fTags').value = item.rarity || '';
 
     const usdPrice = item.market_price != null ? item.market_price : item.low_price;
     if (usdPrice != null) {
       const rate = Number(rateInput.value) || 1.08;
       const eurValue = usdPrice / rate;
       document.getElementById('fValue').value = eurValue.toFixed(2);
+      document.getElementById('fCurrency').value = 'EUR';
+      isValueAutoFilled = true;
     }
     suggestBox.style.display = 'none';
   }
+
+  document.getElementById('fValue').addEventListener('input', () => {
+    isValueAutoFilled = false;
+  });
 
   fNameInput.addEventListener('input', () => {
     clearTimeout(searchDebounce);
@@ -525,9 +553,16 @@
           <span>${escapeHtml(c.condition)}</span>
           <span style="color:var(--orange); font-weight:600;">${languageFlag(c.language)} ${escapeHtml(c.language || 'EN')}</span>
         </div>
+        ${c.tags && c.tags.length > 0 ? `
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
+          ${c.tags.map(t => `<span class="tag-pill" data-tag="${escapeHtml(t)}" style="font-size:10.5px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-faint); padding:2px 7px; border-radius:20px; cursor:pointer;">#${escapeHtml(t)}</span>`).join('')}
+        </div>` : ''}
       </div>
       <div class="card-value">
-        <div class="total display-font">${formatEUR(c.value * c.quantity)} €</div>
+        <div class="total display-font" style="display:flex; align-items:center; gap:4px; justify-content:flex-end;">
+          ${c.valueIsManual ? `<span title="Valeur saisie manuellement" style="color:var(--text-fainter); font-size:12px;">✎</span>` : ''}
+          ${formatEUR(c.value * c.quantity)} €
+        </div>
         <div class="unit">${formatEUR(c.value)} € / unité</div>
       </div>
       <div class="row-actions">
@@ -620,7 +655,9 @@
       language: 'EN',
       value: usdPrice != null ? Number((usdPrice / rate).toFixed(2)) : 0,
       imageUrl: item.image_url,
-      tcgProductId: item.tcg_product_id
+      tcgProductId: item.tcg_product_id,
+      tags: item.rarity ? [item.rarity] : [],
+      valueIsManual: usdPrice == null
     };
 
     try {
@@ -635,7 +672,9 @@
         value: saved.value,
         imageUrl: saved.image_url || '',
         language: saved.language || 'EN',
-        tcgProductId: saved.tcg_product_id || null
+        tcgProductId: saved.tcg_product_id || null,
+            tags: saved.tags || [],
+            valueIsManual: saved.value_is_manual !== false
       });
       render();
     } catch (e) {
@@ -648,7 +687,7 @@
   function render() {
     const query = searchInput.value.toLowerCase();
     const filtered = cards.filter(c =>
-      (c.name + ' ' + c.series + ' ' + c.cardNumber + ' ' + (c.language || '')).toLowerCase().includes(query)
+      (c.name + ' ' + c.series + ' ' + c.cardNumber + ' ' + (c.language || '') + ' ' + (c.tags || []).join(' ')).toLowerCase().includes(query)
     );
 
     const totalValue = cards.reduce((sum, c) => sum + (Number(c.value) || 0) * (Number(c.quantity) || 0), 0);
@@ -804,6 +843,14 @@
       });
     });
 
+    listContainer.querySelectorAll('.tag-pill').forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchInput.value = pill.dataset.tag;
+        render();
+      });
+    });
+
     listContainer.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -865,6 +912,9 @@
     document.getElementById('fQuantity').value = 1;
     document.getElementById('fImageUrl').value = '';
     document.getElementById('fTcgProductId').value = '';
+    document.getElementById('fCurrency').value = 'EUR';
+    document.getElementById('fTags').value = '';
+    isValueAutoFilled = false;
     suggestBox.style.display = 'none';
   }
 
@@ -876,9 +926,12 @@
     document.getElementById('fQuantity').value = card.quantity;
     document.getElementById('fCondition').value = card.condition;
     document.getElementById('fValue').value = card.value;
+    document.getElementById('fCurrency').value = 'EUR';
+    document.getElementById('fTags').value = (card.tags || []).join(', ');
     document.getElementById('fImageUrl').value = card.imageUrl || '';
     document.getElementById('fLanguage').value = card.language || 'EN';
     document.getElementById('fTcgProductId').value = card.tcgProductId || '';
+    isValueAutoFilled = card.valueIsManual === false;
     formTitle.textContent = 'Modifier la carte';
     submitBtnText.textContent = 'Enregistrer les modifications';
     openForm();
@@ -906,7 +959,14 @@
     const cardNumber = document.getElementById('fCardNumber').value.trim();
     const quantity = parseInt(document.getElementById('fQuantity').value, 10);
     const condition = document.getElementById('fCondition').value;
-    const value = parseFloat(document.getElementById('fValue').value);
+    const rawValue = parseFloat(document.getElementById('fValue').value);
+    const currency = document.getElementById('fCurrency').value;
+    const rate = Number(rateInput.value) || 1.08;
+    const value = currency === 'USD' && !isNaN(rawValue) ? rawValue / rate : rawValue;
+    const tags = document.getElementById('fTags').value
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
 
     if (!name) { showError('Le nom de la carte est requis.'); return; }
     if (!cardNumber) { showError('Le numéro de la carte est requis.'); return; }
@@ -922,7 +982,9 @@
       condition, value,
       imageUrl: document.getElementById('fImageUrl').value || null,
       language: document.getElementById('fLanguage').value,
-      tcgProductId: document.getElementById('fTcgProductId').value || null
+      tcgProductId: document.getElementById('fTcgProductId').value || null,
+      tags,
+      valueIsManual: !isValueAutoFilled
     };
 
     try {
@@ -940,7 +1002,9 @@
             value: saved.value,
             imageUrl: saved.image_url || '',
             language: saved.language || 'EN',
-            tcgProductId: saved.tcg_product_id || null
+            tcgProductId: saved.tcg_product_id || null,
+            tags: saved.tags || [],
+            valueIsManual: saved.value_is_manual !== false
           };
         }
       } else {
@@ -955,7 +1019,9 @@
           value: saved.value,
           imageUrl: saved.image_url || '',
           language: saved.language || 'EN',
-          tcgProductId: saved.tcg_product_id || null
+          tcgProductId: saved.tcg_product_id || null,
+            tags: saved.tags || [],
+            valueIsManual: saved.value_is_manual !== false
         });
       }
       closeFormReset();
