@@ -240,9 +240,10 @@
     </label>
     <input type="hidden" id="fTcgProductId" value="">
     <div class="row">
-      <label>
+      <label style="position: relative;">
         Série
-        <input type="text" id="fSeries" class="field-input" placeholder="ex: Awakening">
+        <input type="text" id="fSeries" class="field-input" placeholder="ex: Awakening" autocomplete="off">
+        <div id="seriesSuggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:220px; overflow-y:auto; z-index:20;"></div>
       </label>
       <label>
         Numéro de carte
@@ -288,9 +289,12 @@
       </label>
     </div>
     <div style="font-size:11px; color:var(--text-fainter); margin-top:-8px; margin-bottom:2px;">Si tu choisis $, le montant est converti et sauvegardé en € automatiquement.</div>
-    <label>
-      Tags (séparés par des virgules, optionnel)
-      <input type="text" id="fTags" class="field-input" placeholder="ex: Overlord, Albedo, SP">
+    <label style="position: relative;">
+      Tags (optionnel)
+      <div id="tagsChipBox" class="field-input" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:46px; height:auto; padding:8px 10px; cursor:text;">
+        <input type="text" id="fTagInput" placeholder="Ajoute un tag..." autocomplete="off" style="border:none; background:transparent; color:var(--text); outline:none; flex:1; min-width:90px; font-size:14.5px; padding:2px;">
+      </div>
+      <div id="tagSuggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:180px; overflow-y:auto; z-index:20;"></div>
     </label>
     <label>
       URL de l'image (optionnel)
@@ -511,7 +515,8 @@
     document.getElementById('fCardNumber').value = item.card_number || '';
     document.getElementById('fImageUrl').value = item.image_url || '';
     document.getElementById('fTcgProductId').value = item.tcg_product_id || '';
-    document.getElementById('fTags').value = item.rarity || '';
+    currentTags = item.rarity ? [item.rarity] : [];
+    renderTagChips();
 
     const usdPrice = item.market_price != null ? item.market_price : item.low_price;
     if (usdPrice != null) {
@@ -528,6 +533,160 @@
     isValueAutoFilled = false;
   });
 
+  // --- Autocomplétion du champ Série ---
+  const fSeriesInput = document.getElementById('fSeries');
+  const seriesSuggestBox = document.getElementById('seriesSuggestBox');
+  let seriesDebounce = null;
+  let activeSeriesSuggestions = [];
+
+  async function searchSeries(query) {
+    if (!query || query.trim().length < 1) {
+      seriesSuggestBox.style.display = 'none';
+      return;
+    }
+    try {
+      const q = encodeURIComponent(query.trim());
+      const url = SET_PROGRESS_ENDPOINT + '?select=game,set_name&game=ilike.*Weiss Schwarz*&set_name=ilike.*' + q + '*&order=set_name&limit=8';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const data = await res.json();
+      activeSeriesSuggestions = data;
+      renderSeriesSuggestions(data);
+    } catch (e) {
+      seriesSuggestBox.style.display = 'none';
+    }
+  }
+
+  function renderSeriesSuggestions(items) {
+    if (!items || items.length === 0) {
+      seriesSuggestBox.style.display = 'none';
+      return;
+    }
+    seriesSuggestBox.innerHTML = items.map((item, i) => `
+      <div class="suggest-item" data-index="${i}" style="padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); font-size:13.5px;">
+        ${escapeHtml(item.set_name)}
+      </div>`).join('');
+    seriesSuggestBox.style.display = 'block';
+
+    seriesSuggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        fSeriesInput.value = activeSeriesSuggestions[Number(el.dataset.index)].set_name;
+        seriesSuggestBox.style.display = 'none';
+      });
+    });
+  }
+
+  fSeriesInput.addEventListener('input', () => {
+    clearTimeout(seriesDebounce);
+    const q = fSeriesInput.value;
+    seriesDebounce = setTimeout(() => searchSeries(q), 250);
+  });
+
+  fSeriesInput.addEventListener('blur', () => {
+    setTimeout(() => { seriesSuggestBox.style.display = 'none'; }, 150);
+  });
+
+  // --- Tags en tuiles avec suggestions ---
+  let currentTags = [];
+  const tagsChipBox = document.getElementById('tagsChipBox');
+  const fTagInput = document.getElementById('fTagInput');
+  const tagSuggestBox = document.getElementById('tagSuggestBox');
+  let tagDebounce = null;
+  let activeTagSuggestions = [];
+
+  function renderTagChips() {
+    tagsChipBox.querySelectorAll('.tag-chip').forEach(el => el.remove());
+    currentTags.forEach(tag => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.style.cssText = 'display:flex; align-items:center; gap:5px; background:var(--bg-panel); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:20px; font-size:12.5px;';
+      chip.innerHTML = `#${escapeHtml(tag)} <span style="cursor:pointer; color:var(--text-fainter); font-weight:700;">×</span>`;
+      chip.querySelector('span').addEventListener('click', () => {
+        currentTags = currentTags.filter(t => t !== tag);
+        renderTagChips();
+      });
+      tagsChipBox.insertBefore(chip, fTagInput);
+    });
+  }
+
+  function addTag(text) {
+    const clean = text.trim();
+    if (!clean || currentTags.includes(clean)) return;
+    currentTags.push(clean);
+    renderTagChips();
+  }
+
+  async function searchTags(query) {
+    if (!query || query.trim().length < 1) {
+      tagSuggestBox.style.display = 'none';
+      return;
+    }
+    try {
+      const q = encodeURIComponent(query.trim());
+      const url = USED_TAGS_ENDPOINT + '?select=tag&game=ilike.*Weiss Schwarz*&tag=ilike.*' + q + '*&limit=8';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const data = await res.json();
+      activeTagSuggestions = [...new Set(data.map(d => d.tag))].filter(t => !currentTags.includes(t));
+      renderTagSuggestions();
+    } catch (e) {
+      tagSuggestBox.style.display = 'none';
+    }
+  }
+
+  function renderTagSuggestions() {
+    if (activeTagSuggestions.length === 0) {
+      tagSuggestBox.style.display = 'none';
+      return;
+    }
+    tagSuggestBox.innerHTML = activeTagSuggestions.map((tag, i) => `
+      <div class="suggest-item" data-index="${i}" style="padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); font-size:13.5px;">
+        #${escapeHtml(tag)}
+      </div>`).join('');
+    tagSuggestBox.style.display = 'block';
+
+    tagSuggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        addTag(activeTagSuggestions[Number(el.dataset.index)]);
+        fTagInput.value = '';
+        tagSuggestBox.style.display = 'none';
+        fTagInput.focus();
+      });
+    });
+  }
+
+  fTagInput.addEventListener('input', () => {
+    clearTimeout(tagDebounce);
+    const q = fTagInput.value;
+    tagDebounce = setTimeout(() => searchTags(q), 200);
+  });
+
+  fTagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(fTagInput.value.replace(/,$/, ''));
+      fTagInput.value = '';
+      tagSuggestBox.style.display = 'none';
+    } else if (e.key === 'Backspace' && fTagInput.value === '' && currentTags.length > 0) {
+      currentTags = currentTags.slice(0, -1);
+      renderTagChips();
+    }
+  });
+
+  fTagInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (fTagInput.value.trim()) {
+        addTag(fTagInput.value);
+        fTagInput.value = '';
+      }
+      tagSuggestBox.style.display = 'none';
+    }, 150);
+  });
+
+  tagsChipBox.addEventListener('click', () => fTagInput.focus());
+
   fNameInput.addEventListener('input', () => {
     clearTimeout(searchDebounce);
     const q = fNameInput.value;
@@ -543,6 +702,7 @@
   }
 
   const SET_PROGRESS_ENDPOINT = SUPABASE_URL + '/rest/v1/set_progress';
+  const USED_TAGS_ENDPOINT = SUPABASE_URL + '/rest/v1/used_tags';
   let allSeriesCache = null; // liste de toutes les séries connues (game, set_name, total_cards)
   const catalogBySeriesCache = {}; // série -> liste de cartes du catalogue (chargée à la demande)
   const missingItemLookup = {}; // tcg_product_id -> objet carte catalogue (pour le bouton +)
@@ -921,7 +1081,8 @@
     document.getElementById('fImageUrl').value = '';
     document.getElementById('fTcgProductId').value = '';
     document.getElementById('fCurrency').value = 'EUR';
-    document.getElementById('fTags').value = '';
+    currentTags = [];
+    renderTagChips();
     isValueAutoFilled = false;
     suggestBox.style.display = 'none';
   }
@@ -935,7 +1096,8 @@
     document.getElementById('fCondition').value = card.condition;
     document.getElementById('fValue').value = card.value;
     document.getElementById('fCurrency').value = 'EUR';
-    document.getElementById('fTags').value = (card.tags || []).join(', ');
+    currentTags = (card.tags || []).slice();
+    renderTagChips();
     document.getElementById('fImageUrl').value = card.imageUrl || '';
     document.getElementById('fLanguage').value = card.language || 'EN';
     document.getElementById('fTcgProductId').value = card.tcgProductId || '';
@@ -972,10 +1134,8 @@
     const currency = document.getElementById('fCurrency').value;
     const rate = Number(rateInput.value) || 1.08;
     const value = currency === 'USD' && !isNaN(rawValue) ? rawValue / rate : rawValue;
-    const tags = document.getElementById('fTags').value
-      .split(',')
-      .map(t => t.trim())
-      .filter(Boolean);
+    if (fTagInput.value.trim()) { addTag(fTagInput.value); fTagInput.value = ''; }
+    const tags = currentTags.slice();
 
     if (!name) { showError('Le nom de la carte est requis.'); return; }
     if (!cardNumber) { showError('Le numéro de la carte est requis.'); return; }
