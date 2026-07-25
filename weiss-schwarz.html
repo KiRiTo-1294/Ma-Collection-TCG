@@ -539,14 +539,31 @@
   let seriesDebounce = null;
   let activeSeriesSuggestions = [];
 
+  async function saveCustomSeries(seriesName) {
+    if (!seriesName || !seriesName.trim()) return;
+    try {
+      await fetch(CUSTOM_SERIES_ENDPOINT, {
+        method: 'POST',
+        headers: Object.assign({}, SB_HEADERS, {
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=ignore-duplicates,return=minimal'
+        }),
+        body: JSON.stringify({ game: GAME_LABEL, set_name: seriesName.trim() })
+      });
+    } catch (e) {
+      // Pas grave si ça échoue, ce n'est qu'un bonus pour l'autocomplétion future
+    }
+  }
+
   async function searchSeries(query) {
     if (!query || query.trim().length < 1) {
       seriesSuggestBox.style.display = 'none';
       return;
     }
     try {
-      const q = encodeURIComponent(query.trim());
-      const url = SET_PROGRESS_ENDPOINT + '?select=game,set_name&game=ilike.*Weiss Schwarz*&set_name=ilike.*' + q + '*&order=set_name&limit=8';
+      const words = query.trim().split(/\s+/).filter(Boolean);
+      const wordFilters = words.map(w => 'set_name.ilike.*' + encodeURIComponent(w) + '*').join(',');
+      const url = ALL_SERIES_ENDPOINT + '?select=game,set_name&game=ilike.*' + encodeURIComponent(GAME_LABEL) + '*&and=(' + wordFilters + ')&order=set_name&limit=8';
       const res = await fetch(url, { headers: SB_HEADERS });
       if (!res.ok) return;
       const data = await res.json();
@@ -703,6 +720,9 @@
 
   const SET_PROGRESS_ENDPOINT = SUPABASE_URL + '/rest/v1/set_progress';
   const USED_TAGS_ENDPOINT = SUPABASE_URL + '/rest/v1/used_tags';
+  const ALL_SERIES_ENDPOINT = SUPABASE_URL + '/rest/v1/all_known_series';
+  const CUSTOM_SERIES_ENDPOINT = SUPABASE_URL + '/rest/v1/custom_series';
+  const GAME_LABEL = 'Weiss Schwarz';
   let allSeriesCache = null; // liste de toutes les séries connues (game, set_name, total_cards)
   const catalogBySeriesCache = {}; // série -> liste de cartes du catalogue (chargée à la demande)
   const missingItemLookup = {}; // tcg_product_id -> objet carte catalogue (pour le bouton +)
@@ -1133,7 +1153,9 @@
     const rawValue = rawValueInput === '' ? 0 : parseFloat(rawValueInput);
     const currency = document.getElementById('fCurrency').value;
     const rate = Number(rateInput.value) || 1.08;
-    const value = currency === 'USD' && !isNaN(rawValue) ? rawValue / rate : rawValue;
+    const value = currency === 'USD' && !isNaN(rawValue)
+      ? Math.round((rawValue / rate) * 100) / 100
+      : Math.round((isNaN(rawValue) ? 0 : rawValue) * 100) / 100;
     if (fTagInput.value.trim()) { addTag(fTagInput.value); fTagInput.value = ''; }
     const tags = currentTags.slice();
 
@@ -1193,6 +1215,7 @@
             valueIsManual: saved.value_is_manual !== false
         });
       }
+      saveCustomSeries(series);
       closeFormReset();
       render();
     } catch (e) {
