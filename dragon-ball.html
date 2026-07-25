@@ -731,6 +731,30 @@
   const ALL_SERIES_ENDPOINT = SUPABASE_URL + '/rest/v1/all_known_series';
   const CUSTOM_SERIES_ENDPOINT = SUPABASE_URL + '/rest/v1/custom_series';
   const GAME_LABEL = 'Dragon Ball';
+  const CARDMARKET_SLUG = 'DragonBallSuper';
+  const CARDMARKET_ENDPOINT = SUPABASE_URL + '/rest/v1/cardmarket_products';
+
+  async function findCardmarketMatch(cardName) {
+    if (!cardName) return null;
+    try {
+      let res = await fetch(
+        CARDMARKET_ENDPOINT + '?select=id_product&game=eq.' + encodeURIComponent(GAME_LABEL) + '&name=ilike.' + encodeURIComponent(cardName) + '&limit=1',
+        { headers: SB_HEADERS }
+      );
+      let data = await res.json();
+      if (data && data.length > 0) return data[0].id_product;
+
+      res = await fetch(
+        CARDMARKET_ENDPOINT + '?select=id_product&game=eq.' + encodeURIComponent(GAME_LABEL) + '&name=ilike.*' + encodeURIComponent(cardName) + '*&limit=1',
+        { headers: SB_HEADERS }
+      );
+      data = await res.json();
+      if (data && data.length > 0) return data[0].id_product;
+    } catch (e) {
+      // pas grave, on utilisera le lien de recherche générique
+    }
+    return null;
+  }
   let allSeriesCache = null; // liste de toutes les séries connues (game, set_name, total_cards)
   const catalogBySeriesCache = {}; // série -> liste de cartes du catalogue (chargée à la demande)
   const missingItemLookup = {}; // tcg_product_id -> objet carte catalogue (pour le bouton +)
@@ -1358,7 +1382,11 @@
     }
 
     const rate = Number(rateInput.value) || 1.08;
-    const cardmarketUrl = 'https://www.cardmarket.com/en/DragonBallSuper/Products/Singles';
+    const cardmarketId = await findCardmarketMatch(card.name);
+    const cardmarketUrl = cardmarketId
+      ? 'https://www.cardmarket.com/en/' + CARDMARKET_SLUG + '/Products?idProduct=' + cardmarketId
+      : 'https://www.cardmarket.com/en/' + CARDMARKET_SLUG + '/Products/Singles';
+    const cardmarketLabel = cardmarketId ? 'Voir sur Cardmarket' : 'Ouvrir Cardmarket (recherche à faire toi-même)';
 
     let priceSectionHtml = '';
     if (catalogRow) {
@@ -1394,7 +1422,7 @@
               ? `<a href="${catalogRow.tcgplayer_url}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--orange); color:var(--bg); font-weight:700; font-size:13.5px; text-decoration:none;">Voir sur TCGplayer</a>`
               : ''
             }
-            <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">Ouvrir Cardmarket (recherche à faire toi-même)</a>
+            <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">${cardmarketLabel}</a>
           </div>
         </div>
       `;
@@ -1402,7 +1430,7 @@
       priceSectionHtml = `
         <div style="background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:10px; padding:16px; margin-top:16px; font-size:13px; color:var(--text-faint);">
           Cette carte a été ajoutée manuellement (pas via la recherche du catalogue), donc aucune donnée de prix externe n'est disponible automatiquement.
-          <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:12px; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">Ouvrir Cardmarket (recherche à faire toi-même)</a>
+          <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:12px; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">${cardmarketLabel}</a>
         </div>
       `;
     }
