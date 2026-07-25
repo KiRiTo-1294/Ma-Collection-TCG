@@ -276,7 +276,7 @@
     </div>
     <div class="row">
       <label style="flex: 2;">
-        Valeur par carte
+        Valeur par carte (optionnel)
         <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
       </label>
       <label style="flex: 1;">
@@ -373,7 +373,11 @@
         value_is_manual: card.valueIsManual !== false
       })
     });
-    if (!res.ok) throw new Error('Erreur d\'ajout');
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).message || ''; } catch (_) {}
+      throw new Error('Erreur d\'ajout' + (detail ? ' : ' + detail : ''));
+    }
     const data = await res.json();
     return data[0];
   }
@@ -400,7 +404,11 @@
         value_is_manual: card.valueIsManual !== false
       })
     });
-    if (!res.ok) throw new Error('Erreur de modification');
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).message || ''; } catch (_) {}
+      throw new Error('Erreur de modification' + (detail ? ' : ' + detail : ''));
+    }
     const data = await res.json();
     return data[0];
   }
@@ -680,7 +688,7 @@
     } catch (e) {
       btn.disabled = false;
       btn.style.opacity = '1';
-      saveStateEl.textContent = "Erreur lors de l'ajout rapide, réessaie.";
+      saveStateEl.textContent = "Erreur lors de l'ajout rapide : " + e.message;
     }
   }
 
@@ -959,7 +967,8 @@
     const cardNumber = document.getElementById('fCardNumber').value.trim();
     const quantity = parseInt(document.getElementById('fQuantity').value, 10);
     const condition = document.getElementById('fCondition').value;
-    const rawValue = parseFloat(document.getElementById('fValue').value);
+    const rawValueInput = document.getElementById('fValue').value.trim();
+    const rawValue = rawValueInput === '' ? 0 : parseFloat(rawValueInput);
     const currency = document.getElementById('fCurrency').value;
     const rate = Number(rateInput.value) || 1.08;
     const value = currency === 'USD' && !isNaN(rawValue) ? rawValue / rate : rawValue;
@@ -970,7 +979,7 @@
 
     if (!name) { showError('Le nom de la carte est requis.'); return; }
     if (!cardNumber) { showError('Le numéro de la carte est requis.'); return; }
-    if (isNaN(value) || value < 0) { showError('Entre une valeur valide (ex: 4.50).'); return; }
+    if (isNaN(value) || value < 0) { showError('La valeur doit être un nombre positif (ou laisse le champ vide).'); return; }
 
     const submitBtn = cardForm.querySelector('.submit-btn');
     submitBtn.disabled = true;
@@ -1027,7 +1036,7 @@
       closeFormReset();
       render();
     } catch (e) {
-      showError(editingId ? 'Erreur lors de la modification, réessaie.' : 'Erreur lors de l\'ajout, réessaie.');
+      showError(e.message || (editingId ? 'Erreur lors de la modification, réessaie.' : 'Erreur lors de l\'ajout, réessaie.'));
     } finally {
       submitBtn.disabled = false;
     }
