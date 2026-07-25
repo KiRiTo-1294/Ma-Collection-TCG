@@ -748,7 +748,6 @@
           <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
           <span>${escapeHtml(c.condition)}</span>
           <span style="color:var(--orange); font-weight:600;">${languageFlag(c.language)} ${escapeHtml(c.language || 'EN')}</span>
-          ${c.owned === false ? `<span style="color:var(--red); font-weight:600;">Non possédée</span>` : ''}
         </div>
         ${c.tags && c.tags.length > 0 ? `
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
@@ -1121,6 +1120,23 @@
     suggestBox.style.display = 'none';
   }
 
+  function resetForNextCard() {
+    // Garde Série, Quantité, État, Langue, Devise et la case "possédée" pour enchaîner vite
+    document.getElementById('fName').value = '';
+    document.getElementById('fCardNumber').value = '';
+    document.getElementById('fValue').value = '';
+    document.getElementById('fImageUrl').value = '';
+    document.getElementById('fTcgProductId').value = '';
+    currentTags = [];
+    renderTagChips();
+    isValueAutoFilled = false;
+    formError.style.display = 'none';
+    suggestBox.style.display = 'none';
+    saveStateEl.textContent = 'Carte ajoutée ✓ — prêt pour la suivante';
+    setTimeout(() => { saveStateEl.textContent = ''; }, 2500);
+    document.getElementById('fName').focus();
+  }
+
   function startEdit(card) {
     editingId = card.id;
     document.getElementById('fName').value = card.name;
@@ -1236,7 +1252,11 @@
         });
       }
       saveCustomSeries(series);
-      closeFormReset();
+      if (editingId) {
+        closeFormReset();
+      } else {
+        resetForNextCard();
+      }
       render();
     } catch (e) {
       showError(e.message || (editingId ? 'Erreur lors de la modification, réessaie.' : 'Erreur lors de l\'ajout, réessaie.'));
