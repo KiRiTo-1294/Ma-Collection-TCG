@@ -590,22 +590,54 @@
       } else {
         containerEl.innerHTML = missing.map(buildMissingRowHtml).join('');
         containerEl.querySelectorAll('.quick-add-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const item = missingItemLookup[btn.dataset.productid];
-            if (item) {
-              editingId = null;
-              formTitle.textContent = 'Ajouter une carte';
-              submitBtnText.textContent = 'Ajouter à la collection';
-              applySuggestion(item);
-              openForm();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-          });
+          btn.addEventListener('click', () => quickAddCard(btn.dataset.productid, btn));
         });
       }
       containerEl.dataset.loaded = '1';
     } catch (e) {
       containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Erreur de chargement.</div>`;
+    }
+  }
+
+  async function quickAddCard(productId, btn) {
+    const item = missingItemLookup[productId];
+    if (!item) return;
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+
+    const rate = Number(rateInput.value) || 1.08;
+    const usdPrice = item.market_price != null ? item.market_price : item.low_price;
+    const payload = {
+      name: item.name,
+      series: item.set_name,
+      cardNumber: item.card_number,
+      quantity: 1,
+      condition: 'Neuve',
+      language: 'EN',
+      value: usdPrice != null ? Number((usdPrice / rate).toFixed(2)) : 0,
+      imageUrl: item.image_url,
+      tcgProductId: item.tcg_product_id
+    };
+
+    try {
+      const saved = await addCardToDb(payload);
+      cards.unshift({
+        id: saved.id,
+        name: saved.name,
+        series: saved.series || '',
+        cardNumber: saved.card_number || '',
+        quantity: saved.quantity,
+        condition: saved.condition,
+        value: saved.value,
+        imageUrl: saved.image_url || '',
+        language: saved.language || 'EN',
+        tcgProductId: saved.tcg_product_id || null
+      });
+      render();
+    } catch (e) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      saveStateEl.textContent = "Erreur lors de l'ajout rapide, réessaie.";
     }
   }
 
@@ -631,14 +663,12 @@
 
     listContainer.innerHTML = '';
 
-    if (cards.length === 0 && !cardForm.classList.contains('visible')) {
-      listContainer.innerHTML = `
-        <div class="empty-state">
+    const emptyNotice = cards.length === 0
+      ? `<div class="empty-state" style="padding:30px 20px;">
           <div class="title">Ta collection est vide.</div>
-          <div class="sub">Appuie sur "Ajouter" pour commencer.</div>
-        </div>`;
-      return;
-    }
+          <div class="sub">Parcours les séries ci-dessous et appuie sur "+" pour ajouter une carte.</div>
+        </div>`
+      : '';
 
     // Recherche active : liste plate filtrée (comportement simple et rapide)
     if (query) {
@@ -687,7 +717,7 @@
       `;
     });
 
-    listContainer.innerHTML = html;
+    listContainer.innerHTML = emptyNotice + html;
 
     seriesNames.forEach(seriesName => {
       const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
