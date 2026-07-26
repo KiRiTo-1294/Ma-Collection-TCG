@@ -221,11 +221,16 @@
       Ajouter
     </button>
   </div>
-  <div style="margin-top:8px;">
+  <div style="margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
     <button type="button" id="refreshPricesBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px; display:flex; align-items:center; gap:6px;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
       <span id="refreshPricesLabel">Actualiser les prix</span>
     </button>
+    <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-fainter);">
+      Trier par :
+      <button type="button" class="sort-toggle-btn" data-sort="number" style="background:var(--orange); border:none; border-radius:6px; padding:6px 10px; color:var(--bg); font-weight:600; font-size:12px;">N°</button>
+      <button type="button" class="sort-toggle-btn" data-sort="name" style="background:none; border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text-faint); font-weight:600; font-size:12px;">Nom</button>
+    </div>
   </div>
   <div class="save-state" id="saveState"></div>
 </div>
@@ -454,6 +459,20 @@
   const submitBtnText = document.getElementById('submitBtnText');
 
   let editingId = null;
+  let sortMode = 'number'; // 'number' ou 'name'
+
+  document.querySelectorAll('.sort-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sortMode = btn.dataset.sort;
+      document.querySelectorAll('.sort-toggle-btn').forEach(b => {
+        const active = b.dataset.sort === sortMode;
+        b.style.background = active ? 'var(--orange)' : 'none';
+        b.style.color = active ? 'var(--bg)' : 'var(--text-faint)';
+        b.style.border = active ? 'none' : '1px solid var(--border)';
+      });
+      render();
+    });
+  });
   let isValueAutoFilled = false;
 
   // --- Autocomplétion depuis le catalogue ---
@@ -781,13 +800,31 @@
       <div class="card-value">
         <div class="total display-font" style="display:flex; align-items:center; gap:4px; justify-content:flex-end;">
           ${c.valueIsManual ? `<span title="Prix non automatisé" style="color:var(--gold); font-size:13px;">⚠️</span>` : ''}
-          ${formatEUR(c.value * c.quantity)} €
+          ${c.owned === false ? formatEUR(c.value) : formatEUR(c.value * c.quantity)} €
         </div>
-        <div class="unit">${formatEUR(c.value)} € / unité</div>
+        ${c.owned === false ? '' : `<div class="unit">${formatEUR(c.value)} € / unité</div>`}
       </div>
       <div class="row-actions">
         <button type="button" class="edit-btn" data-id="${c.id}" aria-label="Modifier ${escapeHtml(c.name)}">${svgPencil()}</button>
         <button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer ${escapeHtml(c.name)}">${svgTrash()}</button>
+      </div>
+    `;
+  }
+
+  function buildChecklistOwnedRowHtml(item) {
+    return `
+      <div class="card-row" style="opacity:1;">
+        ${item.image_url
+          ? `<div class="thumb-wrap"><img src="${item.image_url}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${item.image_url}" alt=""></div>`
+          : `<div class="qty-badge" style="background:var(--green, #6FCF97);">✓</div>`
+        }
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(item.name)}</div>
+          <div class="card-meta">
+            <span>${svgHash()} ${escapeHtml(item.card_number || '')}</span>
+            <span style="color:#6FCF97; font-weight:600;">Possédée</span>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -822,6 +859,43 @@
     return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   }
 
+  async function loadMissingPreviews(seriesNames, bySeries) {
+    if (!seriesNames || seriesNames.length === 0) return;
+    try {
+      const inValue = 'in.(' + seriesNames.map(n => '"' + n.replace(/"/g, '\\"') + '"').join(',') + ')';
+      const url = CATALOG_ENDPOINT + '?select=set_name,name,tcg_product_id&set_name=' + encodeURIComponent(inValue) + '&limit=5000';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const rows = await res.json();
+
+      const bySeriesCatalog = {};
+      rows.forEach(r => {
+        if (!bySeriesCatalog[r.set_name]) bySeriesCatalog[r.set_name] = [];
+        bySeriesCatalog[r.set_name].push(r);
+      });
+
+      seriesNames.forEach(seriesName => {
+        const catalogRows = bySeriesCatalog[seriesName];
+        if (!catalogRows) return;
+        const ownedIds = new Set(bySeries[seriesName].filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+        const missingNames = catalogRows.filter(r => !ownedIds.has(String(r.tcg_product_id))).map(r => r.name);
+        const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
+        const previewEl = document.getElementById('preview-' + safeId);
+        if (!previewEl) return;
+        if (missingNames.length === 0) {
+          previewEl.textContent = '';
+        } else {
+          const shown = missingNames.slice(0, 4).join(', ');
+          const rest = missingNames.length > 4 ? ` (+${missingNames.length - 4} autres)` : '';
+          previewEl.innerHTML = `<span style="color:var(--red);">Manquantes :</span> ${escapeHtml(shown)}${escapeHtml(rest)}`;
+        }
+      });
+
+    } catch (e) {
+      // pas grave, l'aperçu est juste un bonus
+    }
+  }
+
   async function toggleMissingSection(seriesKey, containerEl, toggleBtn) {
     const isOpen = containerEl.style.display === 'block';
     if (isOpen) {
@@ -842,12 +916,14 @@
         catalogBySeriesCache[seriesKey] = catalogRows;
       }
       const ownedIds = new Set(cards.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+      const owned = catalogRows.filter(item => ownedIds.has(String(item.tcg_product_id)));
       const missing = catalogRows.filter(item => !ownedIds.has(String(item.tcg_product_id)));
 
-      if (missing.length === 0) {
-        containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Tu as toutes les cartes connues de cette série 🎉</div>`;
+      if (missing.length === 0 && owned.length === 0) {
+        containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Aucune carte connue dans cette série pour l'instant.</div>`;
       } else {
-        containerEl.innerHTML = missing.map(buildMissingRowHtml).join('');
+        const summary = `<div style="font-size:11.5px; color:var(--text-fainter); padding:2px 0 10px;">${owned.length} possédée${owned.length > 1 ? 's' : ''} / ${catalogRows.length} connues</div>`;
+        containerEl.innerHTML = summary + owned.map(buildChecklistOwnedRowHtml).join('') + missing.map(buildMissingRowHtml).join('');
         containerEl.querySelectorAll('.quick-add-btn').forEach(btn => {
           btn.addEventListener('click', () => quickAddCard(btn.dataset.productid, btn));
         });
@@ -961,6 +1037,15 @@
       bySeries[key].push(c);
     });
 
+    Object.keys(bySeries).forEach(key => {
+      bySeries[key].sort((a, b) => {
+        if (sortMode === 'name') {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        }
+        return (a.cardNumber || '').localeCompare(b.cardNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+      });
+    });
+
     const seriesNames = Object.keys(bySeries).sort();
     let html = '';
 
@@ -970,13 +1055,14 @@
       const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
       html += `
         <div class="series-group" style="margin-bottom:18px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
             <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); font-weight:600;">
               ${svgLayers()} ${escapeHtml(seriesName)}
               <span style="color:var(--text-fainter); font-weight:400;">(${trulyOwnedCount} possédée${trulyOwnedCount > 1 ? 's' : ''})</span>
             </div>
-            <button type="button" class="missing-toggle" data-series="${escapeHtml(seriesName)}" data-target="miss-${safeId}" data-open-label="Cartes manquantes" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Cartes manquantes</button>
+            <button type="button" class="missing-toggle" data-series="${escapeHtml(seriesName)}" data-target="miss-${safeId}" data-open-label="Voir la liste complète" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Voir la liste complète</button>
           </div>
+          <div id="preview-${safeId}" style="font-size:11.5px; color:var(--text-fainter); margin-bottom:8px;"></div>
           <div class="owned-rows" data-series-rows="${safeId}"></div>
           <div class="missing-rows" id="miss-${safeId}" style="display:none; margin-top:6px;"></div>
         </div>
@@ -1000,6 +1086,7 @@
     });
 
     attachRowHandlers();
+    loadMissingPreviews(seriesNames, bySeries);
 
     listContainer.querySelectorAll('.missing-toggle').forEach(btn => {
       btn.addEventListener('click', () => {
