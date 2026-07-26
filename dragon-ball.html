@@ -910,7 +910,7 @@
     let catalogMissing = [];
     if (mode === 'missing' || mode === 'all') {
       try {
-        const url = CATALOG_ENDPOINT + '?select=name,card_number,rarity,market_price,tcg_product_id&set_name=eq.' + encodeURIComponent(seriesName) + '&limit=2000';
+        const url = CATALOG_ENDPOINT + '?select=name,card_number,rarity,market_price,tcg_product_id,image_url&set_name=eq.' + encodeURIComponent(seriesName) + '&limit=2000';
         const res = await fetch(url, { headers: SB_HEADERS });
         if (res.ok) {
           const catalogRows = await res.json();
@@ -938,7 +938,8 @@
           'Langue': c.language || 'EN',
           'Valeur unitaire (€)': Number(c.value).toFixed(2),
           'Valeur totale (€)': (Number(c.value) * Number(c.quantity)).toFixed(2),
-          'Tags': (c.tags || []).join(', ')
+          'Tags': (c.tags || []).join(', '),
+          'Image': c.imageUrl || ''
         });
       });
     }
@@ -955,7 +956,8 @@
           'Langue': c.language || '',
           'Valeur unitaire (€)': Number(c.value).toFixed(2),
           'Valeur totale (€)': '0.00',
-          'Tags': (c.tags || []).join(', ')
+          'Tags': (c.tags || []).join(', '),
+          'Image': c.imageUrl || ''
         });
       });
       catalogMissing.forEach(item => {
@@ -969,7 +971,8 @@
           'Langue': '',
           'Valeur unitaire (€)': item.market_price != null ? (item.market_price / rate).toFixed(2) : '',
           'Valeur totale (€)': '0.00',
-          'Tags': item.rarity || ''
+          'Tags': item.rarity || '',
+          'Image': item.image_url || ''
         });
       });
     }
@@ -980,6 +983,23 @@
     }
 
     const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Transforme la colonne Image en vrai lien cliquable
+    const headerKeys = Object.keys(rows[0]);
+    const imageColIdx = headerKeys.indexOf('Image');
+    if (imageColIdx !== -1) {
+      rows.forEach((row, i) => {
+        const imgUrl = row['Image'];
+        if (imgUrl) {
+          const cellRef = XLSX.utils.encode_cell({ r: i + 1, c: imageColIdx });
+          if (ws[cellRef]) {
+            ws[cellRef].l = { Target: imgUrl, Tooltip: 'Voir l\'image' };
+            ws[cellRef].v = 'Voir l\'image';
+          }
+        }
+      });
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Collection');
     const modeLabel = mode === 'owned' ? 'possedees' : mode === 'missing' ? 'manquantes' : 'complete';
