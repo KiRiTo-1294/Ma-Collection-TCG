@@ -167,6 +167,7 @@
     * { animation: none !important; transition: none !important; }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -897,6 +898,93 @@
     }
   }
 
+  async function exportSeriesExcel(seriesName, mode) {
+    const rate = Number(rateInput.value) || 1.08;
+    const seriesCards = cards.filter(c => (c.series || '(Sans série)') === seriesName);
+    const localOwned = seriesCards.filter(c => c.owned !== false);
+    const localNotOwned = seriesCards.filter(c => c.owned === false);
+    const localNotOwnedIds = new Set(localNotOwned.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+
+    let catalogMissing = [];
+    if (mode === 'missing' || mode === 'all') {
+      try {
+        const url = CATALOG_ENDPOINT + '?select=name,card_number,rarity,market_price,tcg_product_id&set_name=eq.' + encodeURIComponent(seriesName) + '&limit=2000';
+        const res = await fetch(url, { headers: SB_HEADERS });
+        if (res.ok) {
+          const catalogRows = await res.json();
+          const ownedIds = new Set(seriesCards.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+          catalogMissing = catalogRows.filter(r =>
+            !ownedIds.has(String(r.tcg_product_id)) && !localNotOwnedIds.has(String(r.tcg_product_id))
+          );
+        }
+      } catch (e) {
+        // pas grave, on exportera au moins les données locales
+      }
+    }
+
+    const rows = [];
+
+    if (mode === 'owned' || mode === 'all') {
+      localOwned.forEach(c => {
+        rows.push({
+          'Nom': c.name,
+          'Numéro': c.cardNumber,
+          'Série': seriesName,
+          'Statut': 'Possédée',
+          'Quantité': c.quantity,
+          'État': c.condition,
+          'Langue': c.language || 'EN',
+          'Valeur unitaire (€)': Number(c.value).toFixed(2),
+          'Valeur totale (€)': (Number(c.value) * Number(c.quantity)).toFixed(2),
+          'Tags': (c.tags || []).join(', ')
+        });
+      });
+    }
+
+    if (mode === 'missing' || mode === 'all') {
+      localNotOwned.forEach(c => {
+        rows.push({
+          'Nom': c.name,
+          'Numéro': c.cardNumber,
+          'Série': seriesName,
+          'Statut': 'Manquante',
+          'Quantité': 0,
+          'État': '',
+          'Langue': c.language || '',
+          'Valeur unitaire (€)': Number(c.value).toFixed(2),
+          'Valeur totale (€)': '0.00',
+          'Tags': (c.tags || []).join(', ')
+        });
+      });
+      catalogMissing.forEach(item => {
+        rows.push({
+          'Nom': item.name,
+          'Numéro': item.card_number || '',
+          'Série': seriesName,
+          'Statut': 'Manquante',
+          'Quantité': 0,
+          'État': '',
+          'Langue': '',
+          'Valeur unitaire (€)': item.market_price != null ? (item.market_price / rate).toFixed(2) : '',
+          'Valeur totale (€)': '0.00',
+          'Tags': item.rarity || ''
+        });
+      });
+    }
+
+    if (rows.length === 0) {
+      saveStateEl.textContent = 'Rien à exporter pour ce choix.';
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Collection');
+    const modeLabel = mode === 'owned' ? 'possedees' : mode === 'missing' ? 'manquantes' : 'complete';
+    const safeName = seriesName.replace(/[^a-z0-9]+/gi, '_').slice(0, 50);
+    XLSX.writeFile(wb, `${safeName}_${modeLabel}.xlsx`);
+  }
+
   async function toggleMissingSection(seriesKey, containerEl, toggleBtn) {
     const isOpen = containerEl.style.display === 'block';
     if (isOpen) {
@@ -1062,9 +1150,15 @@
               ${svgLayers()} ${escapeHtml(seriesName)}
               <span id="count-${safeId}" style="color:var(--text-fainter); font-weight:400;">(${trulyOwnedCount} possédée${trulyOwnedCount > 1 ? 's' : ''} / ${localMissingCount} manquante${localMissingCount > 1 ? 's' : ''})</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
               <button type="button" class="collapse-toggle" data-target="rows-${safeId}" style="background:none; border:none; color:var(--text-faint); font-size:12px; font-weight:600; padding:4px;">Masquer</button>
               <button type="button" class="missing-toggle" data-series="${escapeHtml(seriesName)}" data-target="miss-${safeId}" data-open-label="Voir les cartes" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Voir les cartes</button>
+              <select class="export-select" data-series="${escapeHtml(seriesName)}" style="background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-faint); font-size:11px; padding:4px 6px;">
+                <option value="">📊 Export</option>
+                <option value="all">Liste complète</option>
+                <option value="owned">Possédées</option>
+                <option value="missing">Non possédées</option>
+              </select>
             </div>
           </div>
           <div class="owned-rows" id="rows-${safeId}" data-series-rows="${safeId}"></div>
@@ -1106,6 +1200,22 @@
         const isHidden = target.style.display === 'none';
         target.style.display = isHidden ? '' : 'none';
         btn.textContent = isHidden ? 'Masquer' : 'Afficher';
+      });
+    });
+
+    listContainer.querySelectorAll('.export-select').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const mode = sel.value;
+        if (!mode) return;
+        sel.disabled = true;
+        try {
+          await exportSeriesExcel(sel.dataset.series, mode);
+        } catch (e) {
+          saveStateEl.textContent = "Erreur lors de l'export.";
+        } finally {
+          sel.value = '';
+          sel.disabled = false;
+        }
       });
     });
 
