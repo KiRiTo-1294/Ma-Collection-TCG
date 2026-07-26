@@ -876,11 +876,18 @@
 
       seriesNames.forEach(seriesName => {
         const catalogRows = bySeriesCatalog[seriesName];
-        if (!catalogRows) return;
-        const ownedIds = new Set(bySeries[seriesName].filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
-        const missingNames = catalogRows.filter(r => !ownedIds.has(String(r.tcg_product_id))).map(r => r.name);
         const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
         const previewEl = document.getElementById('preview-' + safeId);
+        const toggleBtn = listContainer.querySelector('.missing-toggle[data-target="miss-' + safeId + '"]');
+
+        if (!catalogRows) {
+          // Série ajoutée manuellement : pas de catalogue à comparer, tout est déjà visible dans la liste normale
+          if (toggleBtn) toggleBtn.style.display = 'none';
+          return;
+        }
+
+        const ownedIds = new Set(bySeries[seriesName].filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+        const missingNames = catalogRows.filter(r => !ownedIds.has(String(r.tcg_product_id))).map(r => r.name);
         if (!previewEl) return;
         if (missingNames.length === 0) {
           previewEl.textContent = '';
