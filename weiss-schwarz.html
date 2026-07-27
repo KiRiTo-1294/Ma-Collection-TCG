@@ -894,7 +894,7 @@
           return;
         }
 
-        const ownedIds = new Set(bySeries[seriesName].filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+        const ownedIds = new Set(bySeries[seriesName].filter(c => c.tcgProductId && c.owned !== false).map(c => String(c.tcgProductId)));
         const missingCount = catalogRows.filter(r => !ownedIds.has(String(r.tcg_product_id))).length;
         const trulyOwnedCount = bySeries[seriesName].filter(c => c.owned !== false).length;
 
@@ -921,7 +921,7 @@
         const res = await fetch(url, { headers: SB_HEADERS });
         if (res.ok) {
           const catalogRows = await res.json();
-          const ownedIds = new Set(seriesCards.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+          const ownedIds = new Set(seriesCards.filter(c => c.tcgProductId && c.owned !== false).map(c => String(c.tcgProductId)));
           catalogMissing = catalogRows.filter(r =>
             !ownedIds.has(String(r.tcg_product_id)) && !localNotOwnedIds.has(String(r.tcg_product_id))
           );
@@ -1032,7 +1032,7 @@
         catalogRows = await res.json();
         catalogBySeriesCache[seriesKey] = catalogRows;
       }
-      const ownedIds = new Set(cards.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+      const ownedIds = new Set(cards.filter(c => c.tcgProductId && c.owned !== false).map(c => String(c.tcgProductId)));
       const owned = catalogRows.filter(item => ownedIds.has(String(item.tcg_product_id)));
       const missing = catalogRows.filter(item => !ownedIds.has(String(item.tcg_product_id)));
 
@@ -1074,22 +1074,38 @@
     };
 
     try {
-      const saved = await addCardToDb(payload);
-      cards.unshift({
-        id: saved.id,
-        name: saved.name,
-        series: saved.series || '',
-        cardNumber: saved.card_number || '',
-        quantity: saved.quantity,
-        condition: saved.condition,
-        value: saved.value,
-        imageUrl: saved.image_url || '',
-        language: saved.language || 'EN',
-        tcgProductId: saved.tcg_product_id || null,
-            tags: saved.tags || [],
-            valueIsManual: saved.value_is_manual !== false,
-            owned: saved.owned !== false
-      });
+      const existing = cards.find(c => c.tcgProductId && String(c.tcgProductId) === String(item.tcg_product_id));
+
+      if (existing) {
+        const saved = await updateCardInDb(existing.id, {
+          name: existing.name, series: existing.series, cardNumber: existing.cardNumber,
+          quantity: 1, condition: existing.condition, value: existing.value,
+          imageUrl: existing.imageUrl, language: existing.language,
+          tcgProductId: existing.tcgProductId, tags: existing.tags,
+          valueIsManual: existing.valueIsManual, owned: true
+        });
+        const idx = cards.findIndex(c => String(c.id) === String(existing.id));
+        if (idx !== -1) {
+          cards[idx] = Object.assign({}, cards[idx], { quantity: saved.quantity, owned: saved.owned !== false });
+        }
+      } else {
+        const saved = await addCardToDb(payload);
+        cards.unshift({
+          id: saved.id,
+          name: saved.name,
+          series: saved.series || '',
+          cardNumber: saved.card_number || '',
+          quantity: saved.quantity,
+          condition: saved.condition,
+          value: saved.value,
+          imageUrl: saved.image_url || '',
+          language: saved.language || 'EN',
+          tcgProductId: saved.tcg_product_id || null,
+          tags: saved.tags || [],
+          valueIsManual: saved.value_is_manual !== false,
+          owned: saved.owned !== false
+        });
+      }
       render();
     } catch (e) {
       btn.disabled = false;
@@ -1163,7 +1179,12 @@
       });
     });
 
-    const seriesNames = Object.keys(bySeries).sort();
+    const seriesNames = Object.keys(bySeries).filter(name => {
+      const arr = bySeries[name];
+      const trulyOwned = arr.filter(c => c.owned !== false).length;
+      if (trulyOwned > 0) return true;
+      return arr.some(c => !c.tcgProductId);
+    }).sort();
     let html = '';
 
     seriesNames.forEach(seriesName => {
@@ -1256,7 +1277,7 @@
         const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*&game=ilike.*Weiss Schwarz*', { headers: SB_HEADERS });
         allSeriesCache = await res.json();
       }
-      const ownedSeries = new Set(cards.map(c => c.series).filter(Boolean));
+      const ownedSeries = new Set(cards.filter(c => c.owned !== false).map(c => c.series).filter(Boolean));
       const emptySeries = allSeriesCache.filter(sp => !ownedSeries.has(sp.set_name));
       if (emptySeries.length === 0) return;
 
