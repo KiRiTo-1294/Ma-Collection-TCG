@@ -808,7 +808,10 @@
       <div class="row-actions">
         ${c.owned === false ? `<button type="button" class="mark-owned-btn" data-id="${c.id}" aria-label="Marquer ${escapeHtml(c.name)} comme possédée" style="background:none; border:1px solid var(--border); border-radius:6px; padding:8px; color:var(--orange);">${svgPlus()}</button>` : ''}
         <button type="button" class="edit-btn" data-id="${c.id}" aria-label="Modifier ${escapeHtml(c.name)}">${svgPencil()}</button>
-        <button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer ${escapeHtml(c.name)}">${svgTrash()}</button>
+        ${c.owned === false
+          ? `<button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer définitivement ${escapeHtml(c.name)}" title="Supprimer définitivement">${svgTrash()}</button>`
+          : `<button type="button" class="soft-remove-btn" data-id="${c.id}" aria-label="Retirer ${escapeHtml(c.name)} de ta collection" title="Marquer comme non possédée">${svgMinus()}</button>`
+        }
       </div>
     `;
   }
@@ -855,6 +858,10 @@
         </button>
       </div>
     `;
+  }
+
+  function svgMinus() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
   }
 
   function svgPlus() {
@@ -1336,10 +1343,42 @@
       });
     });
 
+    listContainer.querySelectorAll('.soft-remove-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const card = cards.find(c => String(c.id) === String(btn.dataset.id));
+        if (!card) return;
+        btn.disabled = true;
+        try {
+          const saved = await updateCardInDb(card.id, {
+            name: card.name, series: card.series, cardNumber: card.cardNumber,
+            quantity: 0, condition: card.condition, value: card.value,
+            imageUrl: card.imageUrl, language: card.language,
+            tcgProductId: card.tcgProductId, tags: card.tags,
+            valueIsManual: card.valueIsManual, owned: false
+          });
+          const idx = cards.findIndex(c2 => String(c2.id) === String(card.id));
+          if (idx !== -1) {
+            cards[idx] = Object.assign({}, cards[idx], {
+              quantity: saved.quantity, owned: saved.owned !== false
+            });
+          }
+          render();
+        } catch (e2) {
+          btn.disabled = false;
+          saveStateEl.textContent = "Erreur, réessaie.";
+        }
+      });
+    });
+
     listContainer.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
+        const card = cards.find(c => String(c.id) === String(id));
+        const cardName = card ? card.name : 'cette carte';
+        const ok = window.confirm(`Supprimer définitivement "${cardName}" ? Cette action est irréversible et effacera complètement la fiche (pas seulement son statut "possédée").`);
+        if (!ok) return;
         btn.disabled = true;
         try {
           await deleteCardFromDb(id);
