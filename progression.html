@@ -83,12 +83,13 @@
   const RATE = 1.08; // taux $ par € utilisé pour convertir les prix manquants
 
   const params = new URLSearchParams(window.location.search);
-  const validFranchises = ['dragonball', 'onepiece', 'weissschwarz'];
+  const validFranchises = ['dragonball', 'onepiece', 'weissschwarz', 'zx'];
   const franchise = validFranchises.includes(params.get('franchise')) ? params.get('franchise') : 'dragonball';
   const FRANCHISE_CONFIG = {
     dragonball: { gameFilter: 'Dragon Ball', cardsGame: 'Dragon Ball', backHref: 'dragon-ball.html', title: 'Progression — Dragon Ball' },
     onepiece: { gameFilter: 'One Piece', cardsGame: 'One Piece', backHref: 'one-piece.html', title: 'Progression — One Piece' },
-    weissschwarz: { gameFilter: 'Weiss Schwarz', cardsGame: 'Weiss Schwarz', backHref: 'weiss-schwarz.html', title: 'Progression — Weiss Schwarz' }
+    weissschwarz: { gameFilter: 'Weiss Schwarz', cardsGame: 'Weiss Schwarz', backHref: 'weiss-schwarz.html', title: 'Progression — Weiss Schwarz' },
+    zx: { gameFilter: 'Z/X', cardsGame: 'Z/X', backHref: 'z-x.html', title: 'Progression — Z/X' }
   };
   const cfg = FRANCHISE_CONFIG[franchise];
   document.getElementById('backLink').href = cfg.backHref;
