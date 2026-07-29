@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ma Collection Z/X</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #191410;
+    --bg-panel: #1D1712;
+    --bg-input: #100C09;
+    --border: #3A2E20;
+    --border-soft: #2E2419;
+    --text: #F5EDE3;
+    --text-muted: #B8A88F;
+    --text-faint: #8A7A63;
+    --text-fainter: #6B5D48;
+    --orange: #4EA8DE;
+    --orange-hover: #6BB8E8;
+    --gold: #F4A62A;
+    --red: #E4572E;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .display-font { font-family: 'Saira Condensed', system-ui, sans-serif; }
+  input, select, button { font-family: inherit; touch-action: manipulation; }
+  input:focus, select:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  button { cursor: pointer; }
+
+  .header {
+    padding: 28px 20px 24px;
+    background: linear-gradient(180deg, #1F1712 0%, #191410 100%);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .inner { max-width: 720px; margin: 0 auto; }
+  .eyebrow {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600;
+  }
+  h1 {
+    font-size: clamp(32px, 8vw, 44px);
+    font-weight: 800; margin: 0 0 14px; color: var(--orange); line-height: 1;
+  }
+  .stats { display: flex; gap: 14px; flex-wrap: wrap; }
+  .stat-box {
+    background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; flex: 1 1 200px;
+  }
+  .stat-label {
+    font-size: 11px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 4px;
+  }
+  .stat-value { font-size: 30px; font-weight: 700; color: var(--gold); }
+  .stat-value.white { color: var(--text); }
+  .usd-approx { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+
+  .usd-toggle {
+    margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px; font-size: 12.5px; color: var(--text-faint);
+  }
+  .usd-toggle label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .usd-toggle input[type="checkbox"] { accent-color: var(--orange); width: 16px; height: 16px; }
+  .rate-input {
+    width: 52px; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text); padding: 4px 5px; font-size: 12px;
+  }
+
+  .controls { max-width: 720px; margin: 0 auto; padding: 18px 20px 0; }
+  .search-row { display: flex; gap: 10px; }
+  .search-wrap { position: relative; flex: 1; }
+  .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+  .search-wrap input {
+    width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+    border-radius: 8px; padding: 13px 12px 13px 36px; color: var(--text); font-size: 15px;
+  }
+  .add-btn {
+    background: var(--orange); border: none; border-radius: 8px; padding: 13px 18px;
+    color: var(--bg); font-weight: 700; font-size: 15px; display: flex; align-items: center;
+    gap: 6px; min-height: 46px;
+  }
+  .add-btn:active { background: var(--orange-hover); }
+  .add-btn.open { background: var(--border); color: var(--text); }
+  .save-state { font-size: 11px; color: var(--text-fainter); margin-top: 8px; min-height: 14px; }
+
+  .form-panel {
+    max-width: 720px; margin: 4px auto 0; padding: 0 20px;
+  }
+  form {
+    display: none; flex-direction: column; gap: 12px; background: var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-top: 4px;
+  }
+  form.visible { display: flex; }
+  form label { font-size: 12px; color: var(--text-muted); display: block; }
+  form .row { display: flex; gap: 12px; }
+  form .row > label { flex: 1; }
+  .field-input {
+    display: block; width: 100%; margin-top: 6px; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: 8px; padding: 13px 12px;
+    color: var(--text); font-size: 16px;
+  }
+  .form-error { color: var(--red); font-size: 13px; }
+  .submit-btn {
+    margin-top: 6px; background: var(--orange); border: none; border-radius: 8px;
+    padding: 14px; color: var(--bg); font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px;
+  }
+  .submit-btn:active { background: var(--orange-hover); }
+  .suggest-item:hover, .suggest-item:active { background: var(--bg-panel); }
+  .thumb-wrap { position: relative; flex-shrink: 0; }
+  .thumb-zoom {
+    display: none; position: absolute; left: calc(100% + 8px); top: 50%;
+    transform: translateY(-50%); width: 160px; height: auto; border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.7); border: 1px solid var(--border);
+    z-index: 100; background: var(--bg-input);
+  }
+  .thumb-wrap:hover .thumb-zoom { display: block; }
+
+  .list { max-width: 720px; margin: 0 auto; padding: 4px 20px 60px; }
+  .empty-state { text-align: center; padding: 56px 20px; color: var(--text-fainter); }
+  .empty-state .title { font-size: 15px; margin-bottom: 6px; color: var(--text-muted); }
+  .empty-state .sub { font-size: 13px; }
+  .no-results { text-align: center; padding: 40px 20px; color: var(--text-fainter); font-size: 14px; }
+
+  .card-row {
+    display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+    background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border-soft);
+    margin-bottom: 8px;
+  }
+  .card-row:active { background: #241C16; }
+  .qty-badge {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #FFDD8A, #FF7A29 70%);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: var(--bg); flex-shrink: 0;
+  }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name {
+    font-weight: 600; font-size: 14.5px; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-meta {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+    color: var(--text-faint); margin-top: 2px; flex-wrap: wrap;
+  }
+  .card-meta span { display: flex; align-items: center; gap: 3px; }
+  .card-value { text-align: right; flex-shrink: 0; }
+  .card-value .total { font-size: 17px; font-weight: 700; color: var(--gold); }
+  .card-value .unit { font-size: 11px; color: var(--text-fainter); }
+  .del-btn, .edit-btn {
+    background: none; border: none; padding: 10px; color: var(--text); opacity: 0.5;
+  }
+  .del-btn:active { opacity: 1; color: var(--red); }
+  .edit-btn:active { opacity: 1; color: var(--orange); }
+  .row-actions { display: flex; align-items: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="header">
+  <div class="inner">
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px; font-size:13px;">
+      <a href="index.html" style="color:var(--text-faint); text-decoration:none; display:flex; align-items:center; gap:5px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Tous les jeux
+      </a>
+      <span style="color:var(--border);">·</span>
+      <a href="progression.html?franchise=zx" style="color:var(--orange); text-decoration:none; font-weight:600;">Progression par série</a>
+    </div>
+    <div class="eyebrow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFC857" stroke="#FFC857"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Ma collection
+    </div>
+    <h1 class="display-font">Z/X</h1>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-label">Valeur totale</div>
+        <div class="stat-value display-font" id="totalValue">0,00 €</div>
+        <div class="usd-approx" id="usdApprox" style="display:none;"></div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Cartes</div>
+        <div class="stat-value white display-font" id="totalCount">0</div>
+      </div>
+    </div>
+
+    <div class="usd-toggle">
+      <label>
+        <input type="checkbox" id="showUsd">
+        Afficher l'équivalent en dollars US
+      </label>
+      <span id="rateWrap" style="display:none; align-items:center; gap:4px;">
+        (taux : <input type="number" step="0.01" id="rateInput" class="rate-input" value="1.08"> $ par €)
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A63" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Nom, série ou numéro...">
+    </div>
+    <button type="button" class="add-btn" id="toggleFormBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter
+    </button>
+  </div>
+  <div style="margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <button type="button" id="refreshPricesBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px; display:flex; align-items:center; gap:6px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      <span id="refreshPricesLabel">Actualiser les prix</span>
+    </button>
+    <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-fainter);">
+      Trier par :
+      <button type="button" class="sort-toggle-btn" data-sort="number" style="background:var(--orange); border:none; border-radius:6px; padding:6px 10px; color:var(--bg); font-weight:600; font-size:12px;">N°</button>
+      <button type="button" class="sort-toggle-btn" data-sort="name" style="background:none; border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text-faint); font-weight:600; font-size:12px;">Nom</button>
+    </div>
+  </div>
+  <div class="save-state" id="saveState"></div>
+</div>
+
+<div class="form-panel">
+  <form id="cardForm">
+    <div id="formTitle" class="display-font" style="font-size: 19px; font-weight: 700; color: var(--orange); margin: 0 0 2px;">Ajouter une carte</div>
+    <label style="position: relative;">
+      Nom ou numéro de la carte
+      <input type="text" id="fName" class="field-input" placeholder="ex: Energy Maker ou E-75" autocomplete="off">
+      <div id="suggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:260px; overflow-y:auto; z-index:20;"></div>
+    </label>
+    <input type="hidden" id="fTcgProductId" value="">
+    <div class="row">
+      <label style="position: relative;">
+        Série
+        <input type="text" id="fSeries" class="field-input" placeholder="ex: Awakening" autocomplete="off">
+        <div id="seriesSuggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:220px; overflow-y:auto; z-index:20;"></div>
+      </label>
+      <label>
+        Numéro de carte
+        <input type="text" id="fCardNumber" class="field-input" placeholder="ex: BT1-001">
+      </label>
+    </div>
+    <label style="display:flex; align-items:center; gap:9px; cursor:pointer; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px;">
+      <input type="checkbox" id="fOwned" checked style="width:17px; height:17px; accent-color:var(--orange); flex-shrink:0;">
+      <span style="font-size:14px; color:var(--text);">Je possède cette carte</span>
+      <span style="font-size:11.5px; color:var(--text-fainter); margin-left:auto;">Décoche pour juste la suivre comme manquante</span>
+    </label>
+    <div class="row">
+      <label>
+        Quantité
+        <input type="number" id="fQuantity" class="field-input" min="0" value="1">
+      </label>
+      <label>
+        État
+        <select id="fCondition" class="field-input">
+          <option>Neuve</option>
+          <option>Excellente</option>
+          <option>Jouée</option>
+          <option>Endommagée</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label>
+        Langue
+        <select id="fLanguage" class="field-input">
+          <option value="EN">🇺🇸 Anglais</option>
+          <option value="JP">🇯🇵 Japonais</option>
+          <option value="FR">🇫🇷 Français</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label style="flex: 2;">
+        Valeur par carte (optionnel)
+        <input type="number" id="fValue" class="field-input" min="0" step="0.01" placeholder="ex: 4.50">
+      </label>
+      <label style="flex: 1;">
+        Devise saisie
+        <select id="fCurrency" class="field-input">
+          <option value="EUR">€ Euros</option>
+          <option value="USD">$ Dollars</option>
+        </select>
+      </label>
+    </div>
+    <div style="font-size:11px; color:var(--text-fainter); margin-top:-8px; margin-bottom:2px;">Si tu choisis $, le montant est converti et sauvegardé en € automatiquement.</div>
+    <label style="position: relative;">
+      Tags (optionnel)
+      <div id="tagsChipBox" class="field-input" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-height:46px; height:auto; padding:8px 10px; cursor:text;">
+        <input type="text" id="fTagInput" placeholder="Ajoute un tag..." autocomplete="off" style="border:none; background:transparent; color:var(--text); outline:none; flex:1; min-width:90px; font-size:14.5px; padding:2px;">
+      </div>
+      <div id="tagSuggestBox" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; max-height:180px; overflow-y:auto; z-index:20;"></div>
+    </label>
+    <label>
+      URL de l'image (optionnel)
+      <input type="text" id="fImageUrl" class="field-input" placeholder="Colle un lien d'image ici (ex: depuis TCG Republic)">
+      <div style="font-size:11px; color:var(--text-fainter); margin-top:5px;">Clic droit sur l'image sur un autre site → "Copier l'adresse de l'image" → colle-la ici</div>
+    </label>
+    <div class="form-error" id="formError" style="display:none;"></div>
+    <button type="submit" class="submit-btn" id="submitBtnLabel">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span id="submitBtnText">Ajouter à la collection</span>
+    </button>
+  </form>
+</div>
+
+<div class="list" id="listContainer"></div>
+
+<div id="detailOverlay" style="display:none; position:fixed; inset:0; background:rgba(10,7,5,0.8); z-index:60; overflow-y:auto;">
+  <div id="detailPanel" style="max-width:520px; margin:0 auto; min-height:100vh; background:var(--bg); padding:20px 20px 60px;"></div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://kmopbbdlagtuogydqfws.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttb3BiYmRsYWd0dW9neWRxZndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTI0MjIsImV4cCI6MjA5OTE4ODQyMn0.UtuI-dsekzb78DYKXEEKxBe2EzDLmj2k37w1_1UsHIY';
+  const CARDS_ENDPOINT = SUPABASE_URL + '/rest/v1/cards';
+  const CATALOG_ENDPOINT = SUPABASE_URL + '/rest/v1/card_catalog';
+  const PRICE_HISTORY_ENDPOINT = SUPABASE_URL + '/rest/v1/price_history';
+  const SB_HEADERS = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: 'Bearer ' + SUPABASE_ANON_KEY
+  };
+
+  let cards = [];
+
+  async function loadCards() {
+    saveStateElSafe('Chargement...');
+    try {
+      const res = await fetch(CARDS_ENDPOINT + '?select=*&game=eq.Z%2FX&order=id.desc', { headers: SB_HEADERS });
+      if (!res.ok) throw new Error('Erreur de chargement');
+      const data = await res.json();
+      cards = data.map(d => ({
+        id: d.id,
+        name: d.name,
+        series: d.series || '',
+        cardNumber: d.card_number || '',
+        quantity: d.quantity,
+        condition: d.condition,
+        value: d.value,
+        imageUrl: d.image_url || '',
+        language: d.language || 'EN',
+        tcgProductId: d.tcg_product_id || null,
+        tags: d.tags || [],
+        valueIsManual: d.value_is_manual !== false,
+        owned: d.owned !== false
+      }));
+      saveStateElSafe('');
+    } catch (e) {
+      saveStateElSafe('Erreur de connexion à la base de données.');
+    }
+    render();
+  }
+
+  async function addCardToDb(card) {
+    const res = await fetch(CARDS_ENDPOINT, {
+      method: 'POST',
+      headers: Object.assign({}, SB_HEADERS, {
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      }),
+      body: JSON.stringify({
+        name: card.name,
+        series: card.series,
+        card_number: card.cardNumber,
+        quantity: card.quantity,
+        condition: card.condition,
+        value: card.value,
+        image_url: card.imageUrl || null,
+        language: card.language || 'EN',
+        tcg_product_id: card.tcgProductId || null,
+        game: 'Z/X',
+        tags: card.tags || [],
+        value_is_manual: card.valueIsManual !== false,
+        owned: card.owned !== false
+      })
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).message || ''; } catch (_) {}
+      throw new Error('Erreur d\'ajout' + (detail ? ' : ' + detail : ''));
+    }
+    const data = await res.json();
+    return data[0];
+  }
+
+  async function updateCardInDb(id, card) {
+    const res = await fetch(CARDS_ENDPOINT + '?id=eq.' + id, {
+      method: 'PATCH',
+      headers: Object.assign({}, SB_HEADERS, {
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      }),
+      body: JSON.stringify({
+        name: card.name,
+        series: card.series,
+        card_number: card.cardNumber,
+        quantity: card.quantity,
+        condition: card.condition,
+        value: card.value,
+        image_url: card.imageUrl || null,
+        language: card.language || 'EN',
+        tcg_product_id: card.tcgProductId || null,
+        game: 'Z/X',
+        tags: card.tags || [],
+        value_is_manual: card.valueIsManual !== false,
+        owned: card.owned !== false
+      })
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).message || ''; } catch (_) {}
+      throw new Error('Erreur de modification' + (detail ? ' : ' + detail : ''));
+    }
+    const data = await res.json();
+    return data[0];
+  }
+
+  async function deleteCardFromDb(id) {
+    const res = await fetch(CARDS_ENDPOINT + '?id=eq.' + id, {
+      method: 'DELETE',
+      headers: SB_HEADERS
+    });
+    if (!res.ok) throw new Error('Erreur de suppression');
+  }
+
+  function saveStateElSafe(msg) {
+    const el = document.getElementById('saveState');
+    if (el) el.textContent = msg;
+  }
+
+  const toggleFormBtn = document.getElementById('toggleFormBtn');
+  const cardForm = document.getElementById('cardForm');
+  const formError = document.getElementById('formError');
+  const searchInput = document.getElementById('searchInput');
+  const listContainer = document.getElementById('listContainer');
+  const totalValueEl = document.getElementById('totalValue');
+  const totalCountEl = document.getElementById('totalCount');
+  const usdApproxEl = document.getElementById('usdApprox');
+  const showUsdCheckbox = document.getElementById('showUsd');
+  const rateWrap = document.getElementById('rateWrap');
+  const rateInput = document.getElementById('rateInput');
+  const saveStateEl = document.getElementById('saveState');
+  const formTitle = document.getElementById('formTitle');
+  const submitBtnText = document.getElementById('submitBtnText');
+
+  let editingId = null;
+  let sortMode = 'number'; // 'number' ou 'name'
+
+  document.querySelectorAll('.sort-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sortMode = btn.dataset.sort;
+      document.querySelectorAll('.sort-toggle-btn').forEach(b => {
+        const active = b.dataset.sort === sortMode;
+        b.style.background = active ? 'var(--orange)' : 'none';
+        b.style.color = active ? 'var(--bg)' : 'var(--text-faint)';
+        b.style.border = active ? 'none' : '1px solid var(--border)';
+      });
+      render();
+    });
+  });
+  let isValueAutoFilled = false;
+
+  // --- Autocomplétion depuis le catalogue ---
+  const fNameInput = document.getElementById('fName');
+  const suggestBox = document.getElementById('suggestBox');
+  let searchDebounce = null;
+  let activeSuggestions = [];
+
+  async function searchCatalog(query) {
+    if (!query || query.trim().length < 2) {
+      suggestBox.style.display = 'none';
+      return;
+    }
+    try {
+      const q = encodeURIComponent(query.trim());
+      const url = CATALOG_ENDPOINT + '?and=(or(name.ilike.*' + q + '*,card_number.ilike.*' + q + '*),game.ilike.*Z/X*)&select=*&order=name&limit=8';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const data = await res.json();
+      activeSuggestions = data;
+      renderSuggestions(data);
+    } catch (e) {
+      suggestBox.style.display = 'none';
+    }
+  }
+
+  function renderSuggestions(items) {
+    if (!items || items.length === 0) {
+      suggestBox.style.display = 'none';
+      return;
+    }
+    suggestBox.innerHTML = items.map((item, i) => {
+      const price = item.market_price != null ? item.market_price : item.low_price;
+      const priceLabel = price != null ? '$' + Number(price).toFixed(2) : '—';
+      return `
+        <div class="suggest-item" data-index="${i}" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; gap:10px;">
+          ${item.image_url
+            ? `<div class="thumb-wrap"><img src="${item.image_url}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; background:var(--bg-panel);"><img class="thumb-zoom" src="${item.image_url}" alt=""></div>`
+            : `<div style="width:32px; height:44px; border-radius:4px; background:var(--bg-panel); flex-shrink:0;"></div>`
+          }
+          <div style="min-width:0; flex:1;">
+            <div style="font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(item.name)}</div>
+            <div style="font-size:11px; color:var(--text-faint); margin-top:2px;">${escapeHtml(item.set_name)}${item.card_number ? ' · ' + escapeHtml(item.card_number) : ''}</div>
+          </div>
+          <div style="font-size:12px; color:var(--gold); flex-shrink:0;">${priceLabel}</div>
+        </div>`;
+    }).join('');
+    suggestBox.style.display = 'block';
+
+    suggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const item = activeSuggestions[Number(el.dataset.index)];
+        applySuggestion(item);
+      });
+      el.addEventListener('touchstart', (e) => {
+        const item = activeSuggestions[Number(el.dataset.index)];
+        applySuggestion(item);
+      }, { passive: true });
+    });
+  }
+
+  function applySuggestion(item) {
+    if (!item) return;
+    document.getElementById('fName').value = item.name;
+    document.getElementById('fSeries').value = item.set_name || '';
+    document.getElementById('fCardNumber').value = item.card_number || '';
+    document.getElementById('fImageUrl').value = item.image_url || '';
+    document.getElementById('fTcgProductId').value = item.tcg_product_id || '';
+    currentTags = item.rarity ? [item.rarity] : [];
+    renderTagChips();
+
+    const usdPrice = item.market_price != null ? item.market_price : item.low_price;
+    if (usdPrice != null) {
+      const rate = Number(rateInput.value) || 1.08;
+      const eurValue = usdPrice / rate;
+      document.getElementById('fValue').value = eurValue.toFixed(2);
+      document.getElementById('fCurrency').value = 'EUR';
+      isValueAutoFilled = true;
+    }
+    suggestBox.style.display = 'none';
+  }
+
+  document.getElementById('fValue').addEventListener('input', () => {
+    isValueAutoFilled = false;
+  });
+
+  // --- Autocomplétion du champ Série ---
+  const fSeriesInput = document.getElementById('fSeries');
+  const seriesSuggestBox = document.getElementById('seriesSuggestBox');
+  let seriesDebounce = null;
+  let activeSeriesSuggestions = [];
+
+  async function saveCustomSeries(seriesName) {
+    if (!seriesName || !seriesName.trim()) return;
+    try {
+      await fetch(CUSTOM_SERIES_ENDPOINT, {
+        method: 'POST',
+        headers: Object.assign({}, SB_HEADERS, {
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=ignore-duplicates,return=minimal'
+        }),
+        body: JSON.stringify({ game: GAME_LABEL, set_name: seriesName.trim() })
+      });
+    } catch (e) {
+      // Pas grave si ça échoue, ce n'est qu'un bonus pour l'autocomplétion future
+    }
+  }
+
+  async function searchSeries(query) {
+    if (!query || query.trim().length < 1) {
+      seriesSuggestBox.style.display = 'none';
+      return;
+    }
+    try {
+      const words = query.trim().split(/\s+/).filter(Boolean);
+      const wordFilters = words.map(w => 'set_name.ilike.*' + encodeURIComponent(w) + '*').join(',');
+      const url = ALL_SERIES_ENDPOINT + '?select=game,set_name&game=ilike.*' + encodeURIComponent(GAME_LABEL) + '*&and=(' + wordFilters + ')&order=set_name&limit=8';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const data = await res.json();
+      activeSeriesSuggestions = data;
+      renderSeriesSuggestions(data);
+    } catch (e) {
+      seriesSuggestBox.style.display = 'none';
+    }
+  }
+
+  function renderSeriesSuggestions(items) {
+    if (!items || items.length === 0) {
+      seriesSuggestBox.style.display = 'none';
+      return;
+    }
+    seriesSuggestBox.innerHTML = items.map((item, i) => `
+      <div class="suggest-item" data-index="${i}" style="padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); font-size:13.5px;">
+        ${escapeHtml(item.set_name)}
+      </div>`).join('');
+    seriesSuggestBox.style.display = 'block';
+
+    seriesSuggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        fSeriesInput.value = activeSeriesSuggestions[Number(el.dataset.index)].set_name;
+        seriesSuggestBox.style.display = 'none';
+      });
+    });
+  }
+
+  fSeriesInput.addEventListener('input', () => {
+    clearTimeout(seriesDebounce);
+    const q = fSeriesInput.value;
+    seriesDebounce = setTimeout(() => searchSeries(q), 250);
+  });
+
+  fSeriesInput.addEventListener('blur', () => {
+    setTimeout(() => { seriesSuggestBox.style.display = 'none'; }, 150);
+  });
+
+  // --- Tags en tuiles avec suggestions ---
+  let currentTags = [];
+  const tagsChipBox = document.getElementById('tagsChipBox');
+  const fTagInput = document.getElementById('fTagInput');
+  const tagSuggestBox = document.getElementById('tagSuggestBox');
+  let tagDebounce = null;
+  let activeTagSuggestions = [];
+
+  function renderTagChips() {
+    tagsChipBox.querySelectorAll('.tag-chip').forEach(el => el.remove());
+    currentTags.forEach(tag => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.style.cssText = 'display:flex; align-items:center; gap:5px; background:var(--bg-panel); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:20px; font-size:12.5px;';
+      chip.innerHTML = `#${escapeHtml(tag)} <span style="cursor:pointer; color:var(--text-fainter); font-weight:700;">×</span>`;
+      chip.querySelector('span').addEventListener('click', () => {
+        currentTags = currentTags.filter(t => t !== tag);
+        renderTagChips();
+      });
+      tagsChipBox.insertBefore(chip, fTagInput);
+    });
+  }
+
+  function addTag(text) {
+    const clean = text.trim();
+    if (!clean || currentTags.includes(clean)) return;
+    currentTags.push(clean);
+    renderTagChips();
+  }
+
+  async function searchTags(query) {
+    if (!query || query.trim().length < 1) {
+      tagSuggestBox.style.display = 'none';
+      return;
+    }
+    try {
+      const q = encodeURIComponent(query.trim());
+      const url = USED_TAGS_ENDPOINT + '?select=tag&game=ilike.*Z/X*&tag=ilike.*' + q + '*&limit=8';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const data = await res.json();
+      activeTagSuggestions = [...new Set(data.map(d => d.tag))].filter(t => !currentTags.includes(t));
+      renderTagSuggestions();
+    } catch (e) {
+      tagSuggestBox.style.display = 'none';
+    }
+  }
+
+  function renderTagSuggestions() {
+    if (activeTagSuggestions.length === 0) {
+      tagSuggestBox.style.display = 'none';
+      return;
+    }
+    tagSuggestBox.innerHTML = activeTagSuggestions.map((tag, i) => `
+      <div class="suggest-item" data-index="${i}" style="padding:9px 12px; cursor:pointer; border-bottom:1px solid var(--border-soft); font-size:13.5px;">
+        #${escapeHtml(tag)}
+      </div>`).join('');
+    tagSuggestBox.style.display = 'block';
+
+    tagSuggestBox.querySelectorAll('.suggest-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        addTag(activeTagSuggestions[Number(el.dataset.index)]);
+        fTagInput.value = '';
+        tagSuggestBox.style.display = 'none';
+        fTagInput.focus();
+      });
+    });
+  }
+
+  fTagInput.addEventListener('input', () => {
+    clearTimeout(tagDebounce);
+    const q = fTagInput.value;
+    tagDebounce = setTimeout(() => searchTags(q), 200);
+  });
+
+  fTagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(fTagInput.value.replace(/,$/, ''));
+      fTagInput.value = '';
+      tagSuggestBox.style.display = 'none';
+    } else if (e.key === 'Backspace' && fTagInput.value === '' && currentTags.length > 0) {
+      currentTags = currentTags.slice(0, -1);
+      renderTagChips();
+    }
+  });
+
+  fTagInput.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (fTagInput.value.trim()) {
+        addTag(fTagInput.value);
+        fTagInput.value = '';
+      }
+      tagSuggestBox.style.display = 'none';
+    }, 150);
+  });
+
+  tagsChipBox.addEventListener('click', () => fTagInput.focus());
+
+  fNameInput.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    const q = fNameInput.value;
+    searchDebounce = setTimeout(() => searchCatalog(q), 300);
+  });
+
+  fNameInput.addEventListener('blur', () => {
+    setTimeout(() => { suggestBox.style.display = 'none'; }, 150);
+  });
+
+  function formatEUR(n) {
+    return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  const SET_PROGRESS_ENDPOINT = SUPABASE_URL + '/rest/v1/set_progress';
+  const USED_TAGS_ENDPOINT = SUPABASE_URL + '/rest/v1/used_tags';
+  const ALL_SERIES_ENDPOINT = SUPABASE_URL + '/rest/v1/all_known_series';
+  const CUSTOM_SERIES_ENDPOINT = SUPABASE_URL + '/rest/v1/custom_series';
+  const GAME_LABEL = 'Z/X';
+  const CARDMARKET_SLUG = 'ZX';
+  const CARDMARKET_ENDPOINT = SUPABASE_URL + '/rest/v1/cardmarket_products';
+
+  async function findCardmarketMatch(cardName) {
+    if (!cardName) return null;
+    try {
+      // 1. Correspondance exacte (insensible à la casse)
+      let res = await fetch(
+        CARDMARKET_ENDPOINT + '?select=id_product&game=eq.' + encodeURIComponent(GAME_LABEL) + '&name=ilike.' + encodeURIComponent(cardName) + '&limit=1',
+        { headers: SB_HEADERS }
+      );
+      let data = await res.json();
+      if (data && data.length > 0) return data[0].id_product;
+
+      // 2. Sinon, la correspondance la plus proche contenant le nom
+      res = await fetch(
+        CARDMARKET_ENDPOINT + '?select=id_product&game=eq.' + encodeURIComponent(GAME_LABEL) + '&name=ilike.*' + encodeURIComponent(cardName) + '*&limit=1',
+        { headers: SB_HEADERS }
+      );
+      data = await res.json();
+      if (data && data.length > 0) return data[0].id_product;
+    } catch (e) {
+      // pas grave, on utilisera le lien de recherche générique
+    }
+    return null;
+  }
+  let allSeriesCache = null; // liste de toutes les séries connues (game, set_name, total_cards)
+  const catalogBySeriesCache = {}; // série -> liste de cartes du catalogue (chargée à la demande)
+  const missingItemLookup = {}; // tcg_product_id -> objet carte catalogue (pour le bouton +)
+
+  function buildOwnedRowHtml(c) {
+    return `
+      ${c.imageUrl
+        ? `<div class="thumb-wrap"><img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${c.imageUrl}" alt=""></div>`
+        : `<div class="qty-badge">${c.quantity}</div>`
+      }
+      <div class="card-info">
+        <div class="card-name">${escapeHtml(c.name)}</div>
+        <div class="card-meta">
+          <span>×${c.quantity}</span>
+          <span>${svgHash()} ${escapeHtml(c.cardNumber)}</span>
+          <span>${escapeHtml(c.condition)}</span>
+          <span style="color:var(--orange); font-weight:600;">${languageFlag(c.language)} ${escapeHtml(c.language || 'EN')}</span>
+        </div>
+        ${c.tags && c.tags.length > 0 ? `
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
+          ${c.tags.map(t => `<span class="tag-pill" data-tag="${escapeHtml(t)}" style="font-size:10.5px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-faint); padding:2px 7px; border-radius:20px; cursor:pointer;">#${escapeHtml(t)}</span>`).join('')}
+        </div>` : ''}
+      </div>
+      <div class="card-value">
+        <div class="total display-font" style="display:flex; align-items:center; gap:4px; justify-content:flex-end;">
+          ${c.valueIsManual ? `<span title="Prix non automatisé" style="color:var(--gold); font-size:13px;">⚠️</span>` : ''}
+          ${c.owned === false ? formatEUR(c.value) : formatEUR(c.value * c.quantity)} €
+        </div>
+        ${c.owned === false ? '' : `<div class="unit">${formatEUR(c.value)} € / unité</div>`}
+      </div>
+      <div class="row-actions">
+        ${c.owned === false ? `<button type="button" class="mark-owned-btn" data-id="${c.id}" aria-label="Marquer ${escapeHtml(c.name)} comme possédée" style="background:none; border:1px solid var(--border); border-radius:6px; padding:8px; color:var(--orange);">${svgPlus()}</button>` : ''}
+        <button type="button" class="edit-btn" data-id="${c.id}" aria-label="Modifier ${escapeHtml(c.name)}">${svgPencil()}</button>
+        ${c.owned === false
+          ? `<button type="button" class="del-btn" data-id="${c.id}" aria-label="Supprimer définitivement ${escapeHtml(c.name)}" title="Supprimer définitivement">${svgTrash()}</button>`
+          : `<button type="button" class="soft-remove-btn" data-id="${c.id}" aria-label="Retirer ${escapeHtml(c.name)} de ta collection" title="Marquer comme non possédée">${svgMinus()}</button>`
+        }
+      </div>
+    `;
+  }
+
+  function buildChecklistOwnedRowHtml(item) {
+    return `
+      <div class="card-row" style="opacity:1;">
+        ${item.image_url
+          ? `<div class="thumb-wrap"><img src="${item.image_url}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${item.image_url}" alt=""></div>`
+          : `<div class="qty-badge" style="background:var(--green, #6FCF97);">✓</div>`
+        }
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(item.name)}</div>
+          <div class="card-meta">
+            <span>${svgHash()} ${escapeHtml(item.card_number || '')}</span>
+            <span style="color:#6FCF97; font-weight:600;">Possédée</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function buildMissingRowHtml(item) {
+    const rate = Number(rateInput.value) || 1.08;
+    const priceLabel = item.market_price != null ? formatEUR(item.market_price / rate) + ' €' : '—';
+    missingItemLookup[item.tcg_product_id] = item;
+    return `
+      <div class="card-row missing-row" style="opacity:0.55;">
+        ${item.image_url
+          ? `<div class="thumb-wrap"><img src="${item.image_url}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input); filter:grayscale(60%);"><img class="thumb-zoom" src="${item.image_url}" alt=""></div>`
+          : `<div class="qty-badge" style="background:var(--border-soft);"></div>`
+        }
+        <div class="card-info">
+          <div class="card-name">${escapeHtml(item.name)}</div>
+          <div class="card-meta">
+            <span>${svgHash()} ${escapeHtml(item.card_number || '')}</span>
+          </div>
+        </div>
+        <div class="card-value">
+          <div class="total display-font" style="color:var(--text-fainter);">${priceLabel}</div>
+        </div>
+        <button type="button" class="quick-add-btn" data-productid="${item.tcg_product_id}" aria-label="Ajouter ${escapeHtml(item.name)}" style="background:none; border:1px solid var(--border); border-radius:6px; padding:8px; color:var(--orange); flex-shrink:0;">
+          ${svgPlus()}
+        </button>
+      </div>
+    `;
+  }
+
+  function svgMinus() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  }
+
+  function svgPlus() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  }
+
+  async function loadMissingPreviews(seriesNames, bySeries) {
+    if (!seriesNames || seriesNames.length === 0) return;
+    try {
+      const inValue = 'in.(' + seriesNames.map(n => '"' + n.replace(/"/g, '\"') + '"').join(',') + ')';
+      const url = CATALOG_ENDPOINT + '?select=set_name,name,tcg_product_id&set_name=' + encodeURIComponent(inValue) + '&limit=5000';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      if (!res.ok) return;
+      const rows = await res.json();
+
+      const bySeriesCatalog = {};
+      rows.forEach(r => {
+        if (!bySeriesCatalog[r.set_name]) bySeriesCatalog[r.set_name] = [];
+        bySeriesCatalog[r.set_name].push(r);
+      });
+
+      seriesNames.forEach(seriesName => {
+        const catalogRows = bySeriesCatalog[seriesName];
+        const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
+        const countEl = document.getElementById('count-' + safeId);
+
+        if (!catalogRows) {
+          return;
+        }
+
+        const ownedIds = new Set(bySeries[seriesName].filter(c => c.tcgProductId && c.owned !== false).map(c => String(c.tcgProductId)));
+        const missingCount = catalogRows.filter(r => !ownedIds.has(String(r.tcg_product_id))).length;
+        const trulyOwnedCount = bySeries[seriesName].filter(c => c.owned !== false).length;
+
+        if (countEl) {
+          countEl.textContent = `(${trulyOwnedCount} possédée${trulyOwnedCount > 1 ? 's' : ''} / ${missingCount} manquante${missingCount > 1 ? 's' : ''})`;
+        }
+      });
+    } catch (e) {
+      // pas grave, l'aperçu est juste un bonus
+    }
+  }
+
+  async function exportSeriesExcel(seriesName, mode) {
+    const rate = Number(rateInput.value) || 1.08;
+    const seriesCards = cards.filter(c => (c.series || '(Sans série)') === seriesName);
+    const localOwned = seriesCards.filter(c => c.owned !== false);
+    const localNotOwned = seriesCards.filter(c => c.owned === false);
+    const localNotOwnedIds = new Set(localNotOwned.filter(c => c.tcgProductId).map(c => String(c.tcgProductId)));
+
+    let catalogMissing = [];
+    if (mode === 'missing' || mode === 'all') {
+      try {
+        const url = CATALOG_ENDPOINT + '?select=name,card_number,rarity,market_price,tcg_product_id,image_url&set_name=eq.' + encodeURIComponent(seriesName) + '&limit=2000';
+        const res = await fetch(url, { headers: SB_HEADERS });
+        if (res.ok) {
+          const catalogRows = await res.json();
+          const ownedIds = new Set(seriesCards.filter(c => c.tcgProductId && c.owned !== false).map(c => String(c.tcgProductId)));
+          catalogMissing = catalogRows.filter(r =>
+            !ownedIds.has(String(r.tcg_product_id)) && !localNotOwnedIds.has(String(r.tcg_product_id))
+          );
+        }
+      } catch (e) {
+        // pas grave, on exportera au moins les données locales
+      }
+    }
+
+    const rows = [];
+
+    if (mode === 'owned' || mode === 'all') {
+      localOwned.forEach(c => {
+        rows.push({
+          'Nom': c.name,
+          'Numéro': c.cardNumber,
+          'Série': seriesName,
+          'Statut': 'Possédée',
+          'Quantité': c.quantity,
+          'État': c.condition,
+          'Langue': c.language || 'EN',
+          'Valeur unitaire (€)': Number(c.value).toFixed(2),
+          'Valeur totale (€)': (Number(c.value) * Number(c.quantity)).toFixed(2),
+          'Tags': (c.tags || []).join(', '),
+          'Image': c.imageUrl || ''
+        });
+      });
+    }
+
+    if (mode === 'missing' || mode === 'all') {
+      localNotOwned.forEach(c => {
+        rows.push({
+          'Nom': c.name,
+          'Numéro': c.cardNumber,
+          'Série': seriesName,
+          'Statut': 'Manquante',
+          'Quantité': 0,
+          'État': '',
+          'Langue': c.language || '',
+          'Valeur unitaire (€)': Number(c.value).toFixed(2),
+          'Valeur totale (€)': '0.00',
+          'Tags': (c.tags || []).join(', '),
+          'Image': c.imageUrl || ''
+        });
+      });
+      catalogMissing.forEach(item => {
+        rows.push({
+          'Nom': item.name,
+          'Numéro': item.card_number || '',
+          'Série': seriesName,
+          'Statut': 'Manquante',
+          'Quantité': 0,
+          'État': '',
+          'Langue': '',
+          'Valeur unitaire (€)': item.market_price != null ? (item.market_price / rate).toFixed(2) : '',
+          'Valeur totale (€)': '0.00',
+          'Tags': item.rarity || '',
+          'Image': item.image_url || ''
+        });
+      });
+    }
+
+    if (rows.length === 0) {
+      saveStateEl.textContent = 'Rien à exporter pour ce choix.';
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    const headerKeys = Object.keys(rows[0]);
+    const imageColIdx = headerKeys.indexOf('Image');
+    if (imageColIdx !== -1) {
+      rows.forEach((row, i) => {
+        const imgUrl = row['Image'];
+        if (imgUrl) {
+          const cellRef = XLSX.utils.encode_cell({ r: i + 1, c: imageColIdx });
+          if (ws[cellRef]) {
+            ws[cellRef].l = { Target: imgUrl, Tooltip: 'Voir l\'image' };
+            ws[cellRef].v = 'Voir l\'image';
+          }
+        }
+      });
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Collection');
+    const modeLabel = mode === 'owned' ? 'possedees' : mode === 'missing' ? 'manquantes' : 'complete';
+    const safeName = seriesName.replace(/[^a-z0-9]+/gi, '_').slice(0, 50);
+    XLSX.writeFile(wb, `${safeName}_${modeLabel}.xlsx`);
+  }
+
+  async function toggleMissingSection(seriesKey, containerEl, toggleBtn) {
+    const isOpen = containerEl.style.display === 'block';
+    if (isOpen) {
+      containerEl.style.display = 'none';
+      toggleBtn.textContent = toggleBtn.dataset.openLabel;
+      return;
+    }
+    containerEl.style.display = 'block';
+    toggleBtn.textContent = 'Masquer';
+    if (containerEl.dataset.loaded) return;
+
+    containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Chargement...</div>`;
+    try {
+      let catalogRows = catalogBySeriesCache[seriesKey];
+      if (!catalogRows) {
+        const res = await fetch(CATALOG_ENDPOINT + '?set_name=eq.' + encodeURIComponent(seriesKey) + '&select=*&order=card_number&limit=1000', { headers: SB_HEADERS });
+        catalogRows = await res.json();
+        catalogBySeriesCache[seriesKey] = catalogRows;
+      }
+      const ownedIds = new Set(cards.filter(c => c.tcgProductId && c.owned !== false).map(c => String(c.tcgProductId)));
+      const owned = catalogRows.filter(item => ownedIds.has(String(item.tcg_product_id)));
+      const missing = catalogRows.filter(item => !ownedIds.has(String(item.tcg_product_id)));
+
+      if (missing.length === 0 && owned.length === 0) {
+        containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Aucune carte connue dans cette série pour l'instant.</div>`;
+      } else {
+        const summary = `<div style="font-size:11.5px; color:var(--text-fainter); padding:2px 0 10px;">${owned.length} possédée${owned.length > 1 ? 's' : ''} / ${catalogRows.length} connues</div>`;
+        containerEl.innerHTML = summary + owned.map(buildChecklistOwnedRowHtml).join('') + missing.map(buildMissingRowHtml).join('');
+        containerEl.querySelectorAll('.quick-add-btn').forEach(btn => {
+          btn.addEventListener('click', () => quickAddCard(btn.dataset.productid, btn));
+        });
+      }
+      containerEl.dataset.loaded = '1';
+    } catch (e) {
+      containerEl.innerHTML = `<div style="font-size:12.5px; color:var(--text-fainter); padding:10px 0;">Erreur de chargement.</div>`;
+    }
+  }
+
+  async function quickAddCard(productId, btn) {
+    const item = missingItemLookup[productId];
+    if (!item) return;
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+
+    const rate = Number(rateInput.value) || 1.08;
+    const usdPrice = item.market_price != null ? item.market_price : item.low_price;
+    const payload = {
+      name: item.name,
+      series: item.set_name,
+      cardNumber: item.card_number,
+      quantity: 1,
+      condition: 'Neuve',
+      language: 'EN',
+      value: usdPrice != null ? Number((usdPrice / rate).toFixed(2)) : 0,
+      imageUrl: item.image_url,
+      tcgProductId: item.tcg_product_id,
+      tags: item.rarity ? [item.rarity] : [],
+      valueIsManual: usdPrice == null
+    };
+
+    try {
+      const existing = cards.find(c => c.tcgProductId && String(c.tcgProductId) === String(item.tcg_product_id));
+
+      if (existing) {
+        const saved = await updateCardInDb(existing.id, {
+          name: existing.name, series: existing.series, cardNumber: existing.cardNumber,
+          quantity: 1, condition: existing.condition, value: existing.value,
+          imageUrl: existing.imageUrl, language: existing.language,
+          tcgProductId: existing.tcgProductId, tags: existing.tags,
+          valueIsManual: existing.valueIsManual, owned: true
+        });
+        const idx = cards.findIndex(c => String(c.id) === String(existing.id));
+        if (idx !== -1) {
+          cards[idx] = Object.assign({}, cards[idx], { quantity: saved.quantity, owned: saved.owned !== false });
+        }
+      } else {
+        const saved = await addCardToDb(payload);
+        cards.unshift({
+          id: saved.id,
+          name: saved.name,
+          series: saved.series || '',
+          cardNumber: saved.card_number || '',
+          quantity: saved.quantity,
+          condition: saved.condition,
+          value: saved.value,
+          imageUrl: saved.image_url || '',
+          language: saved.language || 'EN',
+          tcgProductId: saved.tcg_product_id || null,
+          tags: saved.tags || [],
+          valueIsManual: saved.value_is_manual !== false,
+          owned: saved.owned !== false
+        });
+      }
+      render();
+    } catch (e) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      saveStateEl.textContent = "Erreur lors de l'ajout rapide : " + e.message;
+    }
+  }
+
+  function render() {
+    const query = searchInput.value.toLowerCase();
+    const filtered = cards.filter(c =>
+      (c.name + ' ' + c.series + ' ' + c.cardNumber + ' ' + (c.language || '') + ' ' + (c.tags || []).join(' ')).toLowerCase().includes(query)
+    );
+
+    const totalValue = cards.reduce((sum, c) => sum + (Number(c.value) || 0) * (Number(c.quantity) || 0), 0);
+    const totalCount = cards.reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+
+    totalValueEl.textContent = formatEUR(totalValue) + ' €';
+    totalCountEl.textContent = totalCount;
+
+    if (showUsdCheckbox.checked) {
+      const rate = Number(rateInput.value) || 0;
+      usdApproxEl.style.display = 'block';
+      usdApproxEl.textContent = '≈ $' + formatEUR(totalValue * rate) + ' USD';
+    } else {
+      usdApproxEl.style.display = 'none';
+    }
+
+    listContainer.innerHTML = '';
+
+    const emptyNotice = cards.length === 0
+      ? `<div class="empty-state" style="padding:30px 20px;">
+          <div class="title">Ta collection est vide.</div>
+          <div class="sub">Parcours les séries ci-dessous et appuie sur "+" pour ajouter une carte.</div>
+        </div>`
+      : '';
+
+    // Recherche active : liste plate filtrée (comportement simple et rapide)
+    if (query) {
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `<div class="no-results">Aucune carte ne correspond à "${escapeHtml(searchInput.value)}".</div>`;
+        return;
+      }
+      filtered.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        row.dataset.id = c.id;
+        row.style.cursor = 'pointer';
+        if (c.owned === false) row.style.opacity = '0.55';
+        row.innerHTML = buildOwnedRowHtml(c);
+        listContainer.appendChild(row);
+      });
+      attachRowHandlers();
+      return;
+    }
+
+    // Vue par défaut : regroupée par série
+    const bySeries = {};
+    cards.forEach(c => {
+      const key = c.series || '(Sans série)';
+      if (!bySeries[key]) bySeries[key] = [];
+      bySeries[key].push(c);
+    });
+
+    Object.keys(bySeries).forEach(key => {
+      bySeries[key].sort((a, b) => {
+        if (sortMode === 'name') {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        }
+        return (a.cardNumber || '').localeCompare(b.cardNumber || '', undefined, { numeric: true, sensitivity: 'base' });
+      });
+    });
+
+    const seriesNames = Object.keys(bySeries).filter(name => {
+      const arr = bySeries[name];
+      const trulyOwned = arr.filter(c => c.owned !== false).length;
+      if (trulyOwned > 0) return true;
+      return arr.some(c => !c.tcgProductId);
+    }).sort();
+    let html = '';
+
+    seriesNames.forEach(seriesName => {
+      const ownedCards = bySeries[seriesName];
+      const trulyOwnedCount = ownedCards.filter(c => c.owned !== false).length;
+      const localMissingCount = ownedCards.filter(c => c.owned === false).length;
+      const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
+      html += `
+        <div class="series-group" style="margin-bottom:18px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+            <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); font-weight:600;">
+              ${svgLayers()} ${escapeHtml(seriesName)}
+              <span id="count-${safeId}" style="color:var(--text-fainter); font-weight:400;">(${trulyOwnedCount} possédée${trulyOwnedCount > 1 ? 's' : ''} / ${localMissingCount} manquante${localMissingCount > 1 ? 's' : ''})</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+              <button type="button" class="collapse-toggle" data-target="rows-${safeId}" style="background:none; border:none; color:var(--text-faint); font-size:12px; font-weight:600; padding:4px;">Masquer</button>
+              <button type="button" class="missing-toggle" data-series="${escapeHtml(seriesName)}" data-target="miss-${safeId}" data-open-label="Voir les cartes" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Voir les cartes</button>
+              <select class="export-select" data-series="${escapeHtml(seriesName)}" style="background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-faint); font-size:11px; padding:4px 6px;">
+                <option value="">📊 Export</option>
+                <option value="all">Liste complète</option>
+                <option value="owned">Possédées</option>
+                <option value="missing">Non possédées</option>
+              </select>
+            </div>
+          </div>
+          <div class="owned-rows" id="rows-${safeId}" data-series-rows="${safeId}"></div>
+          <div class="missing-rows" id="miss-${safeId}" style="display:none; margin-top:6px;"></div>
+        </div>
+      `;
+    });
+
+    listContainer.innerHTML = emptyNotice + html;
+
+    seriesNames.forEach(seriesName => {
+      const safeId = 'grp-' + btoa(unescape(encodeURIComponent(seriesName))).replace(/[^a-zA-Z0-9]/g, '');
+      const rowsContainer = listContainer.querySelector(`[data-series-rows="${safeId}"]`);
+      bySeries[seriesName].forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        row.dataset.id = c.id;
+        row.style.cursor = 'pointer';
+        if (c.owned === false) row.style.opacity = '0.55';
+        row.innerHTML = buildOwnedRowHtml(c);
+        rowsContainer.appendChild(row);
+      });
+    });
+
+    attachRowHandlers();
+    loadMissingPreviews(seriesNames, bySeries);
+
+    listContainer.querySelectorAll('.missing-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        toggleMissingSection(btn.dataset.series, target, btn);
+      });
+    });
+
+    listContainer.querySelectorAll('.collapse-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        if (!target) return;
+        const isHidden = target.style.display === 'none';
+        target.style.display = isHidden ? '' : 'none';
+        btn.textContent = isHidden ? 'Masquer' : 'Afficher';
+      });
+    });
+
+    listContainer.querySelectorAll('.export-select').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const mode = sel.value;
+        if (!mode) return;
+        sel.disabled = true;
+        try {
+          await exportSeriesExcel(sel.dataset.series, mode);
+        } catch (e) {
+          saveStateEl.textContent = "Erreur lors de l'export.";
+        } finally {
+          sel.value = '';
+          sel.disabled = false;
+        }
+      });
+    });
+
+    renderEmptySeriesSection();
+  }
+
+  async function renderEmptySeriesSection() {
+    try {
+      if (!allSeriesCache) {
+        const res = await fetch(SET_PROGRESS_ENDPOINT + '?select=*&game=ilike.*Z/X*', { headers: SB_HEADERS });
+        allSeriesCache = await res.json();
+      }
+      const ownedSeries = new Set(cards.filter(c => c.owned !== false).map(c => c.series).filter(Boolean));
+      const emptySeries = allSeriesCache.filter(sp => !ownedSeries.has(sp.set_name));
+      if (emptySeries.length === 0) return;
+
+      const wrap = document.createElement('div');
+      wrap.style.marginTop = '24px';
+      wrap.innerHTML = `<div style="font-size:12px; color:var(--text-fainter); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px;">Séries que tu n'as pas encore commencées</div>`;
+
+      emptySeries.forEach(sp => {
+        const safeId = 'empty-' + btoa(unescape(encodeURIComponent(sp.set_name))).replace(/[^a-zA-Z0-9]/g, '');
+        const section = document.createElement('div');
+        section.style.marginBottom = '10px';
+        section.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:8px; padding:11px 14px;">
+            <div style="font-size:13.5px; color:var(--text-faint);">${escapeHtml(sp.set_name)} <span style="color:var(--text-fainter);">(0 / ${sp.total_cards})</span></div>
+            <button type="button" class="missing-toggle" data-series="${escapeHtml(sp.set_name)}" data-target="${safeId}" data-open-label="Voir les cartes" style="background:none; border:none; color:var(--orange); font-size:12px; font-weight:600; padding:4px;">Voir les cartes</button>
+          </div>
+          <div class="missing-rows" id="${safeId}" style="display:none; margin-top:6px;"></div>
+        `;
+        wrap.appendChild(section);
+      });
+
+      listContainer.appendChild(wrap);
+      wrap.querySelectorAll('.missing-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.target);
+          toggleMissingSection(btn.dataset.series, target, btn);
+        });
+      });
+    } catch (e) {
+      // pas grave si ça échoue, la liste des séries vides est un bonus
+    }
+  }
+
+  function attachRowHandlers() {
+    listContainer.querySelectorAll('.card-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const card = cards.find(c => String(c.id) === String(row.dataset.id));
+        if (card) openDetail(card);
+      });
+    });
+
+    listContainer.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const card = cards.find(c => String(c.id) === String(btn.dataset.id));
+        if (card) startEdit(card);
+      });
+    });
+
+    listContainer.querySelectorAll('.mark-owned-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const card = cards.find(c => String(c.id) === String(btn.dataset.id));
+        if (!card) return;
+        btn.disabled = true;
+        try {
+          const saved = await updateCardInDb(card.id, {
+            name: card.name, series: card.series, cardNumber: card.cardNumber,
+            quantity: 1, condition: card.condition, value: card.value,
+            imageUrl: card.imageUrl, language: card.language,
+            tcgProductId: card.tcgProductId, tags: card.tags,
+            valueIsManual: card.valueIsManual, owned: true
+          });
+          const idx = cards.findIndex(c2 => String(c2.id) === String(card.id));
+          if (idx !== -1) {
+            cards[idx] = Object.assign({}, cards[idx], {
+              quantity: saved.quantity, owned: saved.owned !== false
+            });
+          }
+          render();
+        } catch (e2) {
+          btn.disabled = false;
+          saveStateEl.textContent = "Erreur, réessaie.";
+        }
+      });
+    });
+
+    listContainer.querySelectorAll('.tag-pill').forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchInput.value = pill.dataset.tag;
+        render();
+      });
+    });
+
+    listContainer.querySelectorAll('.soft-remove-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const card = cards.find(c => String(c.id) === String(btn.dataset.id));
+        if (!card) return;
+        btn.disabled = true;
+        try {
+          const saved = await updateCardInDb(card.id, {
+            name: card.name, series: card.series, cardNumber: card.cardNumber,
+            quantity: 0, condition: card.condition, value: card.value,
+            imageUrl: card.imageUrl, language: card.language,
+            tcgProductId: card.tcgProductId, tags: card.tags,
+            valueIsManual: card.valueIsManual, owned: false
+          });
+          const idx = cards.findIndex(c2 => String(c2.id) === String(card.id));
+          if (idx !== -1) {
+            cards[idx] = Object.assign({}, cards[idx], {
+              quantity: saved.quantity, owned: saved.owned !== false
+            });
+          }
+          render();
+        } catch (e2) {
+          btn.disabled = false;
+          saveStateEl.textContent = "Erreur, réessaie.";
+        }
+      });
+    });
+
+    listContainer.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const card = cards.find(c => String(c.id) === String(id));
+        const cardName = card ? card.name : 'cette carte';
+        const ok = window.confirm(`Supprimer définitivement "${cardName}" ? Cette action est irréversible et effacera complètement la fiche (pas seulement son statut "possédée").`);
+        if (!ok) return;
+        btn.disabled = true;
+        try {
+          await deleteCardFromDb(id);
+          cards = cards.filter(c => String(c.id) !== String(id));
+          render();
+        } catch (e) {
+          saveStateEl.textContent = 'Erreur lors de la suppression, réessaie.';
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  function languageFlag(lang) {
+    if (lang === 'JP') return '🇯🇵';
+    if (lang === 'FR') return '🇫🇷';
+    return '🇺🇸';
+  }
+
+  function svgHash() {
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>';
+  }
+  function svgLayers() {
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>';
+  }
+  function svgPencil() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>';
+  }
+  function svgTrash() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
+  }
+
+  function openForm() {
+    cardForm.classList.add('visible');
+    toggleFormBtn.classList.add('open');
+    toggleFormBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Fermer';
+    formError.style.display = 'none';
+    document.getElementById('fName').focus();
+  }
+
+  function closeFormReset() {
+    cardForm.classList.remove('visible');
+    toggleFormBtn.classList.remove('open');
+    toggleFormBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter';
+    editingId = null;
+    formTitle.textContent = 'Ajouter une carte';
+    submitBtnText.textContent = 'Ajouter à la collection';
+    cardForm.reset();
+    document.getElementById('fQuantity').value = 1;
+    document.getElementById('fOwned').checked = true;
+    document.getElementById('fImageUrl').value = '';
+    document.getElementById('fTcgProductId').value = '';
+    document.getElementById('fCurrency').value = 'EUR';
+    currentTags = [];
+    renderTagChips();
+    isValueAutoFilled = false;
+    suggestBox.style.display = 'none';
+  }
+
+  function resetForNextCard() {
+    // Garde Série, Quantité, État, Langue, Devise et la case "possédée" pour enchaîner vite
+    document.getElementById('fName').value = '';
+    document.getElementById('fCardNumber').value = '';
+    document.getElementById('fValue').value = '';
+    document.getElementById('fImageUrl').value = '';
+    document.getElementById('fTcgProductId').value = '';
+    currentTags = [];
+    renderTagChips();
+    isValueAutoFilled = false;
+    formError.style.display = 'none';
+    suggestBox.style.display = 'none';
+    saveStateEl.textContent = 'Carte ajoutée ✓ — prêt pour la suivante';
+    setTimeout(() => { saveStateEl.textContent = ''; }, 2500);
+    document.getElementById('fName').focus();
+  }
+
+  function startEdit(card) {
+    editingId = card.id;
+    document.getElementById('fName').value = card.name;
+    document.getElementById('fSeries').value = card.series;
+    document.getElementById('fCardNumber').value = card.cardNumber;
+    document.getElementById('fQuantity').value = card.quantity;
+    document.getElementById('fOwned').checked = card.owned !== false;
+    document.getElementById('fCondition').value = card.condition;
+    document.getElementById('fValue').value = card.value;
+    document.getElementById('fCurrency').value = 'EUR';
+    currentTags = (card.tags || []).slice();
+    renderTagChips();
+    document.getElementById('fImageUrl').value = card.imageUrl || '';
+    document.getElementById('fLanguage').value = card.language || 'EN';
+    document.getElementById('fTcgProductId').value = card.tcgProductId || '';
+    isValueAutoFilled = card.valueIsManual === false;
+    formTitle.textContent = 'Modifier la carte';
+    submitBtnText.textContent = 'Enregistrer les modifications';
+    openForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  toggleFormBtn.addEventListener('click', () => {
+    const isVisible = cardForm.classList.contains('visible');
+    if (isVisible) {
+      closeFormReset();
+      render();
+    } else {
+      editingId = null;
+      formTitle.textContent = 'Ajouter une carte';
+      submitBtnText.textContent = 'Ajouter à la collection';
+      openForm();
+      render();
+    }
+  });
+
+  cardForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('fName').value.trim();
+    const series = document.getElementById('fSeries').value.trim();
+    const cardNumber = document.getElementById('fCardNumber').value.trim();
+    const owned = document.getElementById('fOwned').checked;
+    const quantityRaw = parseInt(document.getElementById('fQuantity').value, 10);
+    const quantity = owned ? quantityRaw : 0;
+    const condition = document.getElementById('fCondition').value;
+    const rawValueInput = document.getElementById('fValue').value.trim();
+    const rawValue = rawValueInput === '' ? 0 : parseFloat(rawValueInput);
+    const currency = document.getElementById('fCurrency').value;
+    const rate = Number(rateInput.value) || 1.08;
+    const value = currency === 'USD' && !isNaN(rawValue)
+      ? Math.round((rawValue / rate) * 100) / 100
+      : Math.round((isNaN(rawValue) ? 0 : rawValue) * 100) / 100;
+    if (fTagInput.value.trim()) { addTag(fTagInput.value); fTagInput.value = ''; }
+    const tags = currentTags.slice();
+
+    if (!name) { showError('Le nom de la carte est requis.'); return; }
+    if (!cardNumber) { showError('Le numéro de la carte est requis.'); return; }
+    if (isNaN(value) || value < 0) { showError('La valeur doit être un nombre positif (ou laisse le champ vide).'); return; }
+
+    const submitBtn = cardForm.querySelector('.submit-btn');
+    submitBtn.disabled = true;
+    formError.style.display = 'none';
+
+    const payload = {
+      name, series, cardNumber,
+      quantity: owned ? (isNaN(quantity) || quantity < 1 ? 1 : quantity) : 0,
+      condition, value,
+      imageUrl: document.getElementById('fImageUrl').value || null,
+      language: document.getElementById('fLanguage').value,
+      tcgProductId: document.getElementById('fTcgProductId').value || null,
+      tags,
+      valueIsManual: !isValueAutoFilled,
+      owned
+    };
+
+    try {
+      if (editingId) {
+        const saved = await updateCardInDb(editingId, payload);
+        const idx = cards.findIndex(c => String(c.id) === String(editingId));
+        if (idx !== -1) {
+          cards[idx] = {
+            id: saved.id,
+            name: saved.name,
+            series: saved.series || '',
+            cardNumber: saved.card_number || '',
+            quantity: saved.quantity,
+            condition: saved.condition,
+            value: saved.value,
+            imageUrl: saved.image_url || '',
+            language: saved.language || 'EN',
+            tcgProductId: saved.tcg_product_id || null,
+            tags: saved.tags || [],
+            valueIsManual: saved.value_is_manual !== false,
+            owned: saved.owned !== false
+          };
+        }
+      } else {
+        const saved = await addCardToDb(payload);
+        cards.unshift({
+          id: saved.id,
+          name: saved.name,
+          series: saved.series || '',
+          cardNumber: saved.card_number || '',
+          quantity: saved.quantity,
+          condition: saved.condition,
+          value: saved.value,
+          imageUrl: saved.image_url || '',
+          language: saved.language || 'EN',
+          tcgProductId: saved.tcg_product_id || null,
+            tags: saved.tags || [],
+            valueIsManual: saved.value_is_manual !== false,
+            owned: saved.owned !== false
+        });
+      }
+      saveCustomSeries(series);
+      if (editingId) {
+        closeFormReset();
+      } else {
+        resetForNextCard();
+      }
+      render();
+    } catch (e) {
+      showError(e.message || (editingId ? 'Erreur lors de la modification, réessaie.' : 'Erreur lors de l\'ajout, réessaie.'));
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  function showError(msg) {
+    formError.textContent = msg;
+    formError.style.display = 'block';
+  }
+
+  searchInput.addEventListener('input', render);
+  showUsdCheckbox.addEventListener('change', () => {
+    rateWrap.style.display = showUsdCheckbox.checked ? 'flex' : 'none';
+    render();
+  });
+  rateInput.addEventListener('input', render);
+
+  // --- Fenêtre de détail d'une carte ---
+  const detailOverlay = document.getElementById('detailOverlay');
+  const detailPanel = document.getElementById('detailPanel');
+
+  detailOverlay.addEventListener('click', (e) => {
+    if (e.target === detailOverlay) closeDetail();
+  });
+
+  function closeDetail() {
+    detailOverlay.style.display = 'none';
+    detailPanel.innerHTML = '';
+  }
+
+  function buildSparkline(history, rate) {
+    if (!history || history.length < 2) return '';
+    const values = history.map(h => Number(h.market_price ?? h.low_price ?? 0) / rate);
+    const dates = history.map(h => new Date(h.recorded_at));
+
+    let min = Math.min(...values);
+    let max = Math.max(...values);
+    if (min === max) { min -= 1; max += 1; } // évite une division par zéro si tous les points sont égaux
+    const range = max - min;
+
+    const w = 460, h = 150;
+    const padLeft = 56, padRight = 10, padTop = 12, padBottom = 26;
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
+
+    const xAt = i => padLeft + (values.length === 1 ? 0 : (i / (values.length - 1)) * plotW);
+    const yAt = v => padTop + plotH - ((v - min) / range) * plotH;
+
+    const points = values.map((v, i) => xAt(i).toFixed(1) + ',' + yAt(v).toFixed(1)).join(' ');
+    const dots = values.map((v, i) => `<circle cx="${xAt(i).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="2.5" fill="var(--gold)"/>`).join('');
+
+    const yVals = [max, (max + min) / 2, min];
+    const gridAndLabels = yVals.map(v => {
+      const y = yAt(v);
+      return `<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${w - padRight}" y2="${y.toFixed(1)}" stroke="var(--border-soft)" stroke-width="1"/>
+              <text x="${padLeft - 8}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--text-fainter)" font-family="Inter, sans-serif">${formatEUR(v)} €</text>`;
+    }).join('');
+
+    const dateFmt = d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    const xIdx = values.length <= 3 ? values.map((_, i) => i) : [0, Math.floor((values.length - 1) / 2), values.length - 1];
+    const xLabels = xIdx.map(i => `<text x="${xAt(i).toFixed(1)}" y="${h - 6}" text-anchor="middle" font-size="10" fill="var(--text-fainter)" font-family="Inter, sans-serif">${dateFmt(dates[i])}</text>`).join('');
+
+    return `
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;">
+        ${gridAndLabels}
+        <polyline points="${points}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}
+        ${xLabels}
+      </svg>`;
+  }
+
+  async function openDetail(card) {
+    detailOverlay.style.display = 'block';
+    detailPanel.innerHTML = `
+      <button type="button" id="closeDetailBtn" style="background:none; border:none; color:var(--text-faint); padding:8px; margin:-8px 0 12px -8px; cursor:pointer;">
+        ${svgArrowLeft()} Retour
+      </button>
+      <div style="text-align:center; padding:40px 0; color:var(--text-faint);">Chargement...</div>
+    `;
+    document.getElementById('closeDetailBtn').addEventListener('click', closeDetail);
+
+    let catalogRow = null;
+    let history = [];
+    if (card.tcgProductId) {
+      try {
+        const [catRes, histRes] = await Promise.all([
+          fetch(CATALOG_ENDPOINT + '?tcg_product_id=eq.' + card.tcgProductId + '&select=*&limit=1', { headers: SB_HEADERS }),
+          fetch(PRICE_HISTORY_ENDPOINT + '?tcg_product_id=eq.' + card.tcgProductId + '&select=*&order=recorded_at.asc', { headers: SB_HEADERS })
+        ]);
+        const catData = await catRes.json();
+        catalogRow = catData[0] || null;
+        history = await histRes.json();
+      } catch (e) {
+        // pas grave, on affichera sans les données de prix externes
+      }
+    }
+
+    const rate = Number(rateInput.value) || 1.08;
+    const cardmarketId = await findCardmarketMatch(card.name);
+    const cardmarketUrl = cardmarketId
+      ? 'https://www.cardmarket.com/en/' + CARDMARKET_SLUG + '/Products?idProduct=' + cardmarketId
+      : 'https://www.cardmarket.com/en/' + CARDMARKET_SLUG + '/Products/Singles';
+    const cardmarketLabel = cardmarketId ? 'Voir sur Cardmarket' : 'Ouvrir Cardmarket (recherche à faire toi-même)';
+
+    let priceSectionHtml = '';
+    if (catalogRow) {
+      const priceCell = (label, usdVal, colorVar) => {
+        const eur = usdVal != null ? formatEUR(usdVal / rate) + ' €' : '—';
+        const usd = usdVal != null ? '$' + Number(usdVal).toFixed(2) : '';
+        return `<div><div style="font-size:11px; color:var(--text-fainter);">${label}</div><div class="display-font" style="font-size:18px; color:${colorVar};">${eur}</div>${usd ? `<div style="font-size:11px; color:var(--text-fainter);">${usd}</div>` : ''}</div>`;
+      };
+      priceSectionHtml = `
+        <div style="background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:10px; padding:16px; margin-top:16px;">
+          <div style="font-size:12px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;">Guide de prix TCGplayer</div>
+          <div style="font-size:11px; color:var(--text-fainter); margin-bottom:10px;">Annonces actuellement en vente — pas l'historique des ventes conclues</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:6px;">
+            ${priceCell('Annonce la moins chère', catalogRow.low_price, 'var(--text)')}
+            ${priceCell('Marché', catalogRow.market_price, 'var(--gold)')}
+            ${priceCell('Moyen', catalogRow.mid_price, 'var(--text)')}
+            ${priceCell('Annonce la plus chère', catalogRow.high_price, 'var(--text)')}
+          </div>
+          <div style="font-size:11px; color:var(--text-fainter); margin-bottom:14px;">Taux utilisé : ${rate} $ par €</div>
+
+          <div style="font-size:12px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px;">Historique du prix marché</div>
+          ${history.length >= 2
+            ? buildSparkline(history, rate)
+            : `<div style="font-size:12.5px; color:var(--text-fainter);">Pas encore assez de données — l'historique se construit chaque semaine à partir de maintenant.</div>`
+          }
+
+          <div style="margin-top:14px; font-size:11px; color:var(--text-fainter);">
+            Le nombre de ventes n'est pas une donnée publique fournie par TCGplayer, on ne peut pas l'afficher.
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:14px;">
+            ${catalogRow.tcgplayer_url
+              ? `<a href="${catalogRow.tcgplayer_url}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--orange); color:var(--bg); font-weight:700; font-size:13.5px; text-decoration:none;">Voir sur TCGplayer</a>`
+              : ''
+            }
+            <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">${cardmarketLabel}</a>
+          </div>
+        </div>
+      `;
+    } else {
+      priceSectionHtml = `
+        <div style="background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:10px; padding:16px; margin-top:16px; font-size:13px; color:var(--text-faint);">
+          Cette carte a été ajoutée manuellement (pas via la recherche du catalogue), donc aucune donnée de prix externe n'est disponible automatiquement.
+          <a href="${cardmarketUrl}" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:12px; padding:11px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:var(--text); font-weight:600; font-size:13.5px; text-decoration:none;">${cardmarketLabel}</a>
+        </div>
+      `;
+    }
+
+    detailPanel.innerHTML = `
+      <button type="button" id="closeDetailBtn" style="background:none; border:none; color:var(--text-faint); padding:8px; margin:-8px 0 12px -8px; cursor:pointer; display:flex; align-items:center; gap:4px; font-size:14px;">
+        ${svgArrowLeft()} Retour
+      </button>
+
+      ${card.imageUrl ? `<img src="${card.imageUrl}" alt="" style="width:100%; max-width:220px; display:block; margin:0 auto 18px; border-radius:10px;">` : ''}
+
+      <h2 class="display-font" style="font-size:24px; color:var(--orange); margin:0 0 6px; text-align:center;">${escapeHtml(card.name)}</h2>
+      <div style="text-align:center; font-size:13px; color:var(--text-faint); margin-bottom:18px;">
+        ${card.series ? escapeHtml(card.series) + ' · ' : ''}${escapeHtml(card.cardNumber)} · ${languageFlag(card.language)} ${escapeHtml(card.language || 'EN')}
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px;">
+          <div style="font-size:11px; color:var(--text-fainter);">Quantité possédée</div>
+          <div class="display-font" style="font-size:20px;">${card.quantity}</div>
+        </div>
+        <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px;">
+          <div style="font-size:11px; color:var(--text-fainter);">État</div>
+          <div class="display-font" style="font-size:20px;">${escapeHtml(card.condition)}</div>
+        </div>
+        <div style="background:var(--bg-input); border:1px solid var(--border); border-radius:8px; padding:12px; grid-column:1 / -1;">
+          <div style="font-size:11px; color:var(--text-fainter);">Valeur personnelle (ta collection)</div>
+          <div class="display-font" style="font-size:22px; color:var(--gold);">${formatEUR(card.value * card.quantity)} €<span style="font-size:12px; color:var(--text-fainter); font-family:'Inter',sans-serif; font-weight:400;"> (${formatEUR(card.value)} € / unité)</span></div>
+        </div>
+      </div>
+
+      ${priceSectionHtml}
+    `;
+    document.getElementById('closeDetailBtn').addEventListener('click', closeDetail);
+  }
+
+  function svgArrowLeft() {
+    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>';
+  }
+
+  // --- Rafraîchissement manuel des prix ---
+  const FUNCTION_URL = SUPABASE_URL + '/functions/v1/rapid-worker';
+  const GAMES_TO_REFRESH = []; // Pas de source de prix automatique disponible pour ce jeu
+  const refreshPricesBtn = document.getElementById('refreshPricesBtn');
+  const refreshPricesLabel = document.getElementById('refreshPricesLabel');
+
+  refreshPricesBtn.addEventListener('click', async () => {
+    if (GAMES_TO_REFRESH.length === 0) {
+      refreshPricesLabel.textContent = "Pas de source de prix automatique pour ce jeu";
+      setTimeout(() => { refreshPricesLabel.textContent = 'Actualiser les prix'; }, 3500);
+      return;
+    }
+    refreshPricesBtn.disabled = true;
+    refreshPricesBtn.style.opacity = '0.6';
+
+    for (let i = 0; i < GAMES_TO_REFRESH.length; i++) {
+      const game = GAMES_TO_REFRESH[i];
+      let offset = 0;
+      let done = false;
+      let totalGroups = null;
+
+      while (!done) {
+        const progressLabel = totalGroups != null ? ` (${offset}/${totalGroups} sets)` : '';
+        refreshPricesLabel.textContent = `Mise à jour ${i + 1}/${GAMES_TO_REFRESH.length} (${game})${progressLabel}...`;
+        try {
+          const res = await fetch(FUNCTION_URL, {
+            method: 'POST',
+            headers: Object.assign({}, SB_HEADERS, { 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ categoryName: game, offset, batchSize: 6 })
+          });
+          if (!res.ok) throw new Error('Échec pour ' + game);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Échec pour ' + game);
+          totalGroups = data.totalGroups;
+          offset = data.nextOffset;
+          done = data.done;
+        } catch (e) {
+          refreshPricesLabel.textContent = 'Erreur pendant la mise à jour, réessaie plus tard';
+          refreshPricesBtn.disabled = false;
+          refreshPricesBtn.style.opacity = '1';
+          return;
+        }
+      }
+    }
+
+    // On vide les caches locaux pour forcer le rechargement des prix affichés
+    Object.keys(catalogBySeriesCache).forEach(k => delete catalogBySeriesCache[k]);
+    allSeriesCache = null;
+
+    refreshPricesLabel.textContent = 'Prix à jour ✓';
+    refreshPricesBtn.disabled = false;
+    refreshPricesBtn.style.opacity = '1';
+    setTimeout(() => { refreshPricesLabel.textContent = 'Actualiser les prix'; }, 4000);
+
+    render();
+  });
+
+  loadCards();
+</script>
+
+</body>
+</html>
