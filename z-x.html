@@ -2160,4 +2160,43 @@
       let totalGroups = null;
 
       while (!done) {
-        const progressLabel = totalGroups != null ? ` (${offset}/${totalGroups} sets)` :
+        const progressLabel = totalGroups != null ? ` (${offset}/${totalGroups} sets)` : '';
+        refreshPricesLabel.textContent = `Mise à jour ${i + 1}/${GAMES_TO_REFRESH.length} (${game})${progressLabel}...`;
+        try {
+          const res = await fetch(FUNCTION_URL, {
+            method: 'POST',
+            headers: Object.assign({}, SB_HEADERS, { 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ categoryName: game, offset, batchSize: 6 })
+          });
+          if (!res.ok) throw new Error('Échec pour ' + game);
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Échec pour ' + game);
+          totalGroups = data.totalGroups;
+          offset = data.nextOffset;
+          done = data.done;
+        } catch (e) {
+          refreshPricesLabel.textContent = 'Erreur pendant la mise à jour, réessaie plus tard';
+          refreshPricesBtn.disabled = false;
+          refreshPricesBtn.style.opacity = '1';
+          return;
+        }
+      }
+    }
+
+    // On vide les caches locaux pour forcer le rechargement des prix affichés
+    Object.keys(catalogBySeriesCache).forEach(k => delete catalogBySeriesCache[k]);
+    allSeriesCache = null;
+
+    refreshPricesLabel.textContent = 'Prix à jour ✓';
+    refreshPricesBtn.disabled = false;
+    refreshPricesBtn.style.opacity = '1';
+    setTimeout(() => { refreshPricesLabel.textContent = 'Actualiser les prix'; }, 4000);
+
+    render();
+  });
+
+  loadCards();
+</script>
+
+</body>
+</html>
