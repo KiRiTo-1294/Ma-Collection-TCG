@@ -247,6 +247,20 @@
       <button type="button" class="sort-toggle-btn" data-sort="number" style="background:var(--orange); border:none; border-radius:6px; padding:6px 10px; color:var(--bg); font-weight:600; font-size:12px;">N°</button>
       <button type="button" class="sort-toggle-btn" data-sort="name" style="background:none; border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text-faint); font-weight:600; font-size:12px;">Nom</button>
     </div>
+    <button type="button" id="selectionModeBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px;">Sélection multiple</button>
+  </div>
+  <div id="bulkActionsBar" style="display:none; margin-top:10px; background:var(--bg-panel); border:1px solid var(--orange); border-radius:10px; padding:12px;">
+    <div style="font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:10px;"><span id="bulkCount">0</span> carte(s) sélectionnée(s)</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <input type="text" id="bulkSeriesInput" placeholder="Nouvelle série..." style="flex:1; min-width:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-size:12.5px;">
+      <button type="button" id="bulkSeriesBtn" style="background:var(--orange); border:none; border-radius:7px; padding:8px 12px; color:var(--bg); font-weight:600; font-size:12.5px;">Changer la série</button>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <input type="text" id="bulkTagInput" placeholder="Ajouter un tag..." style="flex:1; min-width:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-size:12.5px;">
+      <button type="button" id="bulkTagBtn" style="background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text); font-weight:600; font-size:12.5px;">Ajouter le tag</button>
+    </div>
+    <button type="button" id="bulkCancelBtn" style="background:none; border:none; color:var(--text-fainter); font-size:12px; padding:4px;">Annuler la sélection</button>
+    <div id="bulkProgress" style="margin-top:8px; font-size:12px; color:var(--text-fainter);"></div>
   </div>
   <div class="save-state" id="saveState"></div>
 </div>
@@ -476,6 +490,8 @@
 
   let editingId = null;
   let sortMode = 'number'; // 'number' ou 'name'
+  let selectionMode = false;
+  let selectedIds = new Set();
 
   document.querySelectorAll('.sort-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -798,6 +814,7 @@
 
   function buildOwnedRowHtml(c) {
     return `
+      ${selectionMode ? `<input type="checkbox" class="select-checkbox" data-id="${c.id}" ${selectedIds.has(String(c.id)) ? 'checked' : ''} style="width:19px; height:19px; accent-color:var(--orange); flex-shrink:0; margin-right:2px;">` : ''}
       ${c.imageUrl
         ? `<div class="thumb-wrap"><img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${c.imageUrl}" alt=""></div>`
         : `<div class="qty-badge">${c.quantity}</div>`
@@ -1329,8 +1346,23 @@
   function attachRowHandlers() {
     listContainer.querySelectorAll('.card-row').forEach(row => {
       row.addEventListener('click', () => {
+        if (selectionMode) {
+          const id = String(row.dataset.id);
+          if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+          render();
+          return;
+        }
         const card = cards.find(c => String(c.id) === String(row.dataset.id));
         if (card) openDetail(card);
+      });
+    });
+
+    listContainer.querySelectorAll('.select-checkbox').forEach(cb => {
+      cb.addEventListener('click', (e) => e.stopPropagation());
+      cb.addEventListener('change', () => {
+        const id = String(cb.dataset.id);
+        if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+        updateBulkBar();
       });
     });
 
@@ -1986,6 +2018,129 @@
     }
   }
 
+  // ---------- Sélection multiple & actions groupées ----------
+  const selectionModeBtn = document.getElementById('selectionModeBtn');
+  const bulkActionsBar = document.getElementById('bulkActionsBar');
+  const bulkCountEl = document.getElementById('bulkCount');
+  const bulkSeriesInput = document.getElementById('bulkSeriesInput');
+  const bulkSeriesBtn = document.getElementById('bulkSeriesBtn');
+  const bulkTagInput = document.getElementById('bulkTagInput');
+  const bulkTagBtn = document.getElementById('bulkTagBtn');
+  const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+  const bulkProgress = document.getElementById('bulkProgress');
+
+  function updateBulkBar() {
+    bulkCountEl.textContent = selectedIds.size;
+    bulkActionsBar.style.display = selectedIds.size > 0 ? 'block' : 'none';
+  }
+
+  selectionModeBtn.addEventListener('click', () => {
+    selectionMode = !selectionMode;
+    selectedIds.clear();
+    selectionModeBtn.style.background = selectionMode ? 'var(--orange)' : 'none';
+    selectionModeBtn.style.color = selectionMode ? 'var(--bg)' : 'var(--text-faint)';
+    selectionModeBtn.style.border = selectionMode ? 'none' : '1px solid var(--border)';
+    selectionModeBtn.textContent = selectionMode ? 'Quitter la sélection' : 'Sélection multiple';
+    updateBulkBar();
+    render();
+  });
+
+  bulkCancelBtn.addEventListener('click', () => {
+    selectedIds.clear();
+    updateBulkBar();
+    render();
+  });
+
+  bulkSeriesBtn.addEventListener('click', async () => {
+    const newSeries = bulkSeriesInput.value.trim();
+    if (!newSeries) {
+      bulkProgress.textContent = 'Indique un nom de série.';
+      return;
+    }
+    const ok = window.confirm(`Déplacer ${selectedIds.size} carte(s) vers la série "${newSeries}" ? Cette action modifie la série de toutes les cartes sélectionnées.`);
+    if (!ok) return;
+
+    bulkSeriesBtn.disabled = true;
+    let done = 0;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        const card = cards.find(c => String(c.id) === id);
+        if (!card) continue;
+        const saved = await updateCardInDb(card.id, {
+          name: card.name, series: newSeries, cardNumber: card.cardNumber,
+          quantity: card.quantity, condition: card.condition, value: card.value,
+          imageUrl: card.imageUrl, language: card.language,
+          tcgProductId: card.tcgProductId, tags: card.tags,
+          valueIsManual: card.valueIsManual, owned: card.owned
+        });
+        const idx = cards.findIndex(c2 => String(c2.id) === id);
+        if (idx !== -1) cards[idx] = Object.assign({}, cards[idx], { series: saved.series || newSeries });
+        done++;
+        bulkProgress.textContent = `Mise à jour... ${done}/${ids.length}`;
+      }
+      saveCustomSeries(newSeries);
+      bulkProgress.textContent = `${done} carte(s) déplacée(s) ✓`;
+      bulkSeriesInput.value = '';
+      selectedIds.clear();
+      selectionMode = false;
+      selectionModeBtn.textContent = 'Sélection multiple';
+      selectionModeBtn.style.background = 'none';
+      selectionModeBtn.style.color = 'var(--text-faint)';
+      selectionModeBtn.style.border = '1px solid var(--border)';
+      updateBulkBar();
+      render();
+    } catch (e) {
+      bulkProgress.textContent = "Erreur : " + e.message;
+    } finally {
+      bulkSeriesBtn.disabled = false;
+    }
+  });
+
+  bulkTagBtn.addEventListener('click', async () => {
+    const newTag = bulkTagInput.value.trim();
+    if (!newTag) {
+      bulkProgress.textContent = 'Indique un tag à ajouter.';
+      return;
+    }
+    bulkTagBtn.disabled = true;
+    let done = 0;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        const card = cards.find(c => String(c.id) === id);
+        if (!card) continue;
+        const tags = Array.isArray(card.tags) ? card.tags.slice() : [];
+        if (!tags.includes(newTag)) tags.push(newTag);
+        const saved = await updateCardInDb(card.id, {
+          name: card.name, series: card.series, cardNumber: card.cardNumber,
+          quantity: card.quantity, condition: card.condition, value: card.value,
+          imageUrl: card.imageUrl, language: card.language,
+          tcgProductId: card.tcgProductId, tags: tags,
+          valueIsManual: card.valueIsManual, owned: card.owned
+        });
+        const idx = cards.findIndex(c2 => String(c2.id) === id);
+        if (idx !== -1) cards[idx] = Object.assign({}, cards[idx], { tags: saved.tags || tags });
+        done++;
+        bulkProgress.textContent = `Mise à jour... ${done}/${ids.length}`;
+      }
+      bulkProgress.textContent = `Tag ajouté à ${done} carte(s) ✓`;
+      bulkTagInput.value = '';
+      selectedIds.clear();
+      selectionMode = false;
+      selectionModeBtn.textContent = 'Sélection multiple';
+      selectionModeBtn.style.background = 'none';
+      selectionModeBtn.style.color = 'var(--text-faint)';
+      selectionModeBtn.style.border = '1px solid var(--border)';
+      updateBulkBar();
+      render();
+    } catch (e) {
+      bulkProgress.textContent = "Erreur : " + e.message;
+    } finally {
+      bulkTagBtn.disabled = false;
+    }
+  });
+
   const refreshPricesBtn = document.getElementById('refreshPricesBtn');
   const refreshPricesLabel = document.getElementById('refreshPricesLabel');
 
@@ -2005,43 +2160,4 @@
       let totalGroups = null;
 
       while (!done) {
-        const progressLabel = totalGroups != null ? ` (${offset}/${totalGroups} sets)` : '';
-        refreshPricesLabel.textContent = `Mise à jour ${i + 1}/${GAMES_TO_REFRESH.length} (${game})${progressLabel}...`;
-        try {
-          const res = await fetch(FUNCTION_URL, {
-            method: 'POST',
-            headers: Object.assign({}, SB_HEADERS, { 'Content-Type': 'application/json' }),
-            body: JSON.stringify({ categoryName: game, offset, batchSize: 6 })
-          });
-          if (!res.ok) throw new Error('Échec pour ' + game);
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error || 'Échec pour ' + game);
-          totalGroups = data.totalGroups;
-          offset = data.nextOffset;
-          done = data.done;
-        } catch (e) {
-          refreshPricesLabel.textContent = 'Erreur pendant la mise à jour, réessaie plus tard';
-          refreshPricesBtn.disabled = false;
-          refreshPricesBtn.style.opacity = '1';
-          return;
-        }
-      }
-    }
-
-    // On vide les caches locaux pour forcer le rechargement des prix affichés
-    Object.keys(catalogBySeriesCache).forEach(k => delete catalogBySeriesCache[k]);
-    allSeriesCache = null;
-
-    refreshPricesLabel.textContent = 'Prix à jour ✓';
-    refreshPricesBtn.disabled = false;
-    refreshPricesBtn.style.opacity = '1';
-    setTimeout(() => { refreshPricesLabel.textContent = 'Actualiser les prix'; }, 4000);
-
-    render();
-  });
-
-  loadCards();
-</script>
-
-</body>
-</html>
+        const progressLabel = totalGroups != null ? ` (${offset}/${totalGroups} sets)` :
