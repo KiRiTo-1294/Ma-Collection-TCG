@@ -248,7 +248,9 @@
       <button type="button" class="sort-toggle-btn" data-sort="name" style="background:none; border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text-faint); font-weight:600; font-size:12px;">Nom</button>
     </div>
     <button type="button" id="selectionModeBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px;">Sélection multiple</button>
+    <button type="button" id="dedupeBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px;">Nettoyer les doublons</button>
   </div>
+  <div id="dedupeResult" style="margin-top:8px;"></div>
   <div id="bulkActionsBar" style="display:none; margin-top:10px; background:var(--bg-panel); border:1px solid var(--orange); border-radius:10px; padding:12px;">
     <div style="font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:10px;"><span id="bulkCount">0</span> carte(s) sélectionnée(s)</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
@@ -2033,6 +2035,79 @@
   }
 
   // ---------- Sélection multiple & actions groupées ----------
+  const dedupeBtn = document.getElementById('dedupeBtn');
+  const dedupeResult = document.getElementById('dedupeResult');
+
+  function findDuplicateGroups() {
+    const groups = {};
+    cards.forEach(c => {
+      const key = `${(c.series || '').trim().toLowerCase()}|${(c.cardNumber || '').trim().toLowerCase()}|${(c.tags || []).slice().sort().join(',').toLowerCase()}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    });
+    return Object.values(groups).filter(g => g.length > 1);
+  }
+
+  dedupeBtn.addEventListener('click', () => {
+    const groups = findDuplicateGroups();
+    if (groups.length === 0) {
+      dedupeResult.innerHTML = '<div style="font-size:12.5px; color:var(--text-fainter);">Aucun doublon trouvé (même série + même numéro + mêmes tags).</div>';
+      return;
+    }
+    const totalExtra = groups.reduce((sum, g) => sum + (g.length - 1), 0);
+    dedupeResult.innerHTML = `
+      <div style="background:var(--bg-panel); border:1px solid var(--orange); border-radius:10px; padding:12px; font-size:12.5px;">
+        <div style="margin-bottom:8px;"><strong>${groups.length}</strong> carte(s) en double trouvée(s), soit <strong>${totalExtra}</strong> fiche(s) en trop à supprimer.
+        Pour chaque groupe, la fiche possédée (ou la plus complète) est conservée — les quantités possédées sont additionnées, les autres fiches sont supprimées.</div>
+        <button type="button" id="dedupeConfirmBtn" style="background:var(--orange); border:none; border-radius:7px; padding:9px 14px; color:var(--bg); font-weight:600; font-size:12.5px;">Nettoyer maintenant</button>
+        <div id="dedupeProgress" style="margin-top:8px; font-size:12px; color:var(--text-fainter);"></div>
+      </div>`;
+
+    document.getElementById('dedupeConfirmBtn').addEventListener('click', async () => {
+      const ok = window.confirm(`Supprimer ${totalExtra} fiche(s) en double ? Cette action est irréversible.`);
+      if (!ok) return;
+      const progressEl = document.getElementById('dedupeProgress');
+      const confirmBtn = document.getElementById('dedupeConfirmBtn');
+      confirmBtn.disabled = true;
+      let done = 0;
+
+      try {
+        for (const group of groups) {
+          // Choisir la fiche à garder : possédée en priorité, sinon la 1ère du groupe
+          const owned = group.filter(c => c.owned !== false);
+          const survivor = owned.length > 0 ? owned[0] : group[0];
+          const totalQty = owned.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
+          const toDelete = group.filter(c => c.id !== survivor.id);
+
+          if (owned.length > 0 && totalQty !== survivor.quantity) {
+            const saved = await updateCardInDb(survivor.id, {
+              name: survivor.name, series: survivor.series, cardNumber: survivor.cardNumber,
+              quantity: totalQty, condition: survivor.condition, value: survivor.value,
+              imageUrl: survivor.imageUrl, language: survivor.language,
+              tcgProductId: survivor.tcgProductId, tags: survivor.tags,
+              valueIsManual: survivor.valueIsManual, owned: true
+            });
+            const idx = cards.findIndex(c => String(c.id) === String(survivor.id));
+            if (idx !== -1) cards[idx] = Object.assign({}, cards[idx], { quantity: saved.quantity, owned: saved.owned !== false });
+          }
+
+          for (const c of toDelete) {
+            await deleteCardFromDb(c.id);
+            cards = cards.filter(x => String(x.id) !== String(c.id));
+            done++;
+            progressEl.textContent = `Nettoyage... ${done}/${totalExtra}`;
+          }
+        }
+        progressEl.textContent = `${done} fiche(s) en double supprimée(s) ✓`;
+        render();
+      } catch (e) {
+        progressEl.textContent = "Erreur : " + e.message;
+      } finally {
+        confirmBtn.disabled = false;
+      }
+    });
+  });
+
   const selectionModeBtn = document.getElementById('selectionModeBtn');
   const bulkActionsBar = document.getElementById('bulkActionsBar');
   const bulkCountEl = document.getElementById('bulkCount');
