@@ -259,6 +259,9 @@
       <input type="text" id="bulkTagInput" placeholder="Ajouter un tag..." style="flex:1; min-width:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-size:12.5px;">
       <button type="button" id="bulkTagBtn" style="background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text); font-weight:600; font-size:12.5px;">Ajouter le tag</button>
     </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+      <button type="button" id="bulkDeleteBtn" style="background:none; border:1px solid var(--red); border-radius:7px; padding:8px 12px; color:var(--red); font-weight:600; font-size:12.5px;">Supprimer les sélectionnées</button>
+    </div>
     <button type="button" id="bulkCancelBtn" style="background:none; border:none; color:var(--text-fainter); font-size:12px; padding:4px;">Annuler la sélection</button>
     <div id="bulkProgress" style="margin-top:8px; font-size:12px; color:var(--text-fainter);"></div>
   </div>
@@ -1906,9 +1909,23 @@
       return;
     }
 
+    const rowKey = r => `${(r.series || '').trim().toLowerCase()}|${(r.card_number || '').trim().toLowerCase()}|${(r.rarity || '').trim().toLowerCase()}`;
+
+    // 1. Dédoublonner à l'intérieur du fichier lui-même (ex: contenu collé deux fois par erreur)
+    const seenInFile = new Set();
+    let internalDupes = 0;
+    const uniqueRows = [];
+    rows.forEach(r => {
+      const key = rowKey(r);
+      if (seenInFile.has(key)) { internalDupes++; return; }
+      seenInFile.add(key);
+      uniqueRows.push(r);
+    });
+
+    // 2. Comparer ce qui reste à la collection déjà existante
     const conflicts = [];
     const fresh = [];
-    rows.forEach(r => {
+    uniqueRows.forEach(r => {
       const existing = cards.find(c =>
         (c.series || '').trim().toLowerCase() === (r.series || '').trim().toLowerCase() &&
         (c.cardNumber || '').trim().toLowerCase() === (r.card_number || '').trim().toLowerCase() &&
@@ -1921,19 +1938,16 @@
     pendingImportRows = { fresh, conflicts };
 
     let html = `<div style="font-size:12.5px; color:var(--text-faint); margin-bottom:10px;">
-      <strong>${rows.length}</strong> cartes lues dans le fichier — <strong>${fresh.length}</strong> nouvelles, <strong>${conflicts.length}</strong> déjà présentes dans ta collection (même série + même numéro + même rareté).
+      <strong>${rows.length}</strong> lignes lues${internalDupes > 0 ? ` (dont <strong>${internalDupes}</strong> doublons internes au fichier, ignorés automatiquement)` : ''} — <strong>${fresh.length}</strong> nouvelles, <strong>${conflicts.length}</strong> déjà présentes dans ta collection (même série + même numéro + même rareté).
     </div>`;
 
+    html += `<button type="button" id="importGoBtn" style="background:var(--orange); border:none; border-radius:7px; padding:9px 14px; color:var(--bg); font-weight:600; font-size:12.5px;">Importer les ${fresh.length} nouvelle(s) carte(s)</button>`;
+
     if (conflicts.length > 0) {
-      html += `<div style="font-size:12px; color:var(--text-fainter); margin-bottom:10px;">
-        Pour les ${conflicts.length} cartes déjà présentes, que veux-tu faire ?
+      html += `<div style="font-size:12px; color:var(--text-fainter); margin:10px 0 6px;">
+        Les ${conflicts.length} carte(s) déjà présente(s) sont ignorées par défaut (ta collection n'est jamais touchée sans que tu le demandes). Si tu veux quand même écraser ces fiches existantes avec les données du fichier :
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-        <button type="button" id="importReplaceBtn" style="background:var(--orange); border:none; border-radius:7px; padding:9px 14px; color:var(--bg); font-weight:600; font-size:12.5px;">Remplacer les ${conflicts.length} existantes</button>
-        <button type="button" id="importKeepBtn" style="background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:9px 14px; color:var(--text); font-weight:600; font-size:12.5px;">Garder les existantes (ignorer)</button>
-      </div>`;
-    } else {
-      html += `<button type="button" id="importGoBtn" style="background:var(--orange); border:none; border-radius:7px; padding:9px 14px; color:var(--bg); font-weight:600; font-size:12.5px;">Importer les ${fresh.length} cartes</button>`;
+      <button type="button" id="importReplaceBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-weight:600; font-size:12px;">Remplacer quand même les ${conflicts.length} existantes</button>`;
     }
     html += `<div id="importProgress" style="margin-top:10px; font-size:12px; color:var(--text-fainter);"></div>`;
 
@@ -1943,10 +1957,10 @@
     if (goBtn) goBtn.addEventListener('click', () => runImport(fresh, []));
 
     const replaceBtn = document.getElementById('importReplaceBtn');
-    if (replaceBtn) replaceBtn.addEventListener('click', () => runImport(fresh, conflicts, true));
-
-    const keepBtn = document.getElementById('importKeepBtn');
-    if (keepBtn) keepBtn.addEventListener('click', () => runImport(fresh, [], false));
+    if (replaceBtn) replaceBtn.addEventListener('click', () => {
+      const ok = window.confirm(`Remplacer ${conflicts.length} carte(s) déjà présente(s) dans ta collection par les données du fichier ? Leurs infos actuelles (quantité, possédée ou non, etc.) seront écrasées.`);
+      if (ok) runImport([], conflicts, true);
+    });
   });
 
   async function runImport(freshRows, conflictRows, doReplace) {
@@ -2026,6 +2040,7 @@
   const bulkSeriesBtn = document.getElementById('bulkSeriesBtn');
   const bulkTagInput = document.getElementById('bulkTagInput');
   const bulkTagBtn = document.getElementById('bulkTagBtn');
+  const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
   const bulkCancelBtn = document.getElementById('bulkCancelBtn');
   const bulkProgress = document.getElementById('bulkProgress');
 
@@ -2043,6 +2058,38 @@
     selectionModeBtn.textContent = selectionMode ? 'Quitter la sélection' : 'Sélection multiple';
     updateBulkBar();
     render();
+  });
+
+  bulkDeleteBtn.addEventListener('click', async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    const ok = window.confirm(`Supprimer définitivement ${count} carte(s) sélectionnée(s) ? Cette action est irréversible et effacera complètement leurs fiches.`);
+    if (!ok) return;
+
+    bulkDeleteBtn.disabled = true;
+    let done = 0;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        await deleteCardFromDb(id);
+        cards = cards.filter(c => String(c.id) !== id);
+        done++;
+        bulkProgress.textContent = `Suppression... ${done}/${ids.length}`;
+      }
+      bulkProgress.textContent = `${done} carte(s) supprimée(s) ✓`;
+      selectedIds.clear();
+      selectionMode = false;
+      selectionModeBtn.textContent = 'Sélection multiple';
+      selectionModeBtn.style.background = 'none';
+      selectionModeBtn.style.color = 'var(--text-faint)';
+      selectionModeBtn.style.border = '1px solid var(--border)';
+      updateBulkBar();
+      render();
+    } catch (e) {
+      bulkProgress.textContent = "Erreur : " + e.message;
+    } finally {
+      bulkDeleteBtn.disabled = false;
+    }
   });
 
   bulkCancelBtn.addEventListener('click', () => {
