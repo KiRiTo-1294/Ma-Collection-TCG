@@ -222,6 +222,21 @@
       Ajouter
     </button>
   </div>
+  <div style="margin-top:8px;">
+    <button type="button" id="toggleImportBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px; display:flex; align-items:center; gap:6px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Import en masse (CSV)
+    </button>
+    <div id="importPanel" style="display:none; margin-top:10px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:14px;">
+      <div style="font-size:12.5px; color:var(--text-fainter); margin-bottom:8px;">
+        Colle le contenu du fichier CSV (colonnes : name, series, card_number, rarity, price_usd, image_url), ou choisis le fichier directement.
+      </div>
+      <input type="file" id="importFileInput" accept=".csv" style="margin-bottom:8px; font-size:12.5px; color:var(--text-faint);">
+      <textarea id="importTextarea" placeholder="Colle le CSV ici si tu préfères..." style="width:100%; min-height:90px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px; padding:8px; font-family:monospace;"></textarea>
+      <button type="button" id="analyzeImportBtn" style="margin-top:8px; background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:9px 14px; color:var(--text); font-weight:600; font-size:12.5px;">Analyser</button>
+      <div id="importResult" style="margin-top:12px;"></div>
+    </div>
+  </div>
   <div style="margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
     <button type="button" id="refreshPricesBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px; display:flex; align-items:center; gap:6px;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
@@ -232,6 +247,25 @@
       <button type="button" class="sort-toggle-btn" data-sort="number" style="background:var(--orange); border:none; border-radius:6px; padding:6px 10px; color:var(--bg); font-weight:600; font-size:12px;">N°</button>
       <button type="button" class="sort-toggle-btn" data-sort="name" style="background:none; border:1px solid var(--border); border-radius:6px; padding:6px 10px; color:var(--text-faint); font-weight:600; font-size:12px;">Nom</button>
     </div>
+    <button type="button" id="selectionModeBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px;">Sélection multiple</button>
+    <button type="button" id="dedupeBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-size:12.5px;">Nettoyer les doublons</button>
+  </div>
+  <div id="dedupeResult" style="margin-top:8px;"></div>
+  <div id="bulkActionsBar" style="display:none; margin-top:10px; background:var(--bg-panel); border:1px solid var(--orange); border-radius:10px; padding:12px;">
+    <div style="font-size:12.5px; font-weight:600; color:var(--text); margin-bottom:10px;"><span id="bulkCount">0</span> carte(s) sélectionnée(s)</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <input type="text" id="bulkSeriesInput" placeholder="Nouvelle série..." style="flex:1; min-width:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-size:12.5px;">
+      <button type="button" id="bulkSeriesBtn" style="background:var(--orange); border:none; border-radius:7px; padding:8px 12px; color:var(--bg); font-weight:600; font-size:12.5px;">Changer la série</button>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+      <input type="text" id="bulkTagInput" placeholder="Ajouter un tag..." style="flex:1; min-width:140px; background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-size:12.5px;">
+      <button type="button" id="bulkTagBtn" style="background:var(--bg-input); border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text); font-weight:600; font-size:12.5px;">Ajouter le tag</button>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+      <button type="button" id="bulkDeleteBtn" style="background:none; border:1px solid var(--red); border-radius:7px; padding:8px 12px; color:var(--red); font-weight:600; font-size:12.5px;">Supprimer les sélectionnées</button>
+    </div>
+    <button type="button" id="bulkCancelBtn" style="background:none; border:none; color:var(--text-fainter); font-size:12px; padding:4px;">Annuler la sélection</button>
+    <div id="bulkProgress" style="margin-top:8px; font-size:12px; color:var(--text-fainter);"></div>
   </div>
   <div class="save-state" id="saveState"></div>
 </div>
@@ -461,6 +495,8 @@
 
   let editingId = null;
   let sortMode = 'number'; // 'number' ou 'name'
+  let selectionMode = false;
+  let selectedIds = new Set();
 
   document.querySelectorAll('.sort-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -783,6 +819,7 @@
 
   function buildOwnedRowHtml(c) {
     return `
+      ${selectionMode ? `<input type="checkbox" class="select-checkbox" data-id="${c.id}" ${selectedIds.has(String(c.id)) ? 'checked' : ''} style="width:19px; height:19px; accent-color:var(--orange); flex-shrink:0; margin-right:2px;">` : ''}
       ${c.imageUrl
         ? `<div class="thumb-wrap"><img src="${c.imageUrl}" alt="" style="width:34px; height:47px; object-fit:cover; border-radius:5px; background:var(--bg-input);"><img class="thumb-zoom" src="${c.imageUrl}" alt=""></div>`
         : `<div class="qty-badge">${c.quantity}</div>`
@@ -1314,8 +1351,23 @@
   function attachRowHandlers() {
     listContainer.querySelectorAll('.card-row').forEach(row => {
       row.addEventListener('click', () => {
+        if (selectionMode) {
+          const id = String(row.dataset.id);
+          if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+          render();
+          return;
+        }
         const card = cards.find(c => String(c.id) === String(row.dataset.id));
         if (card) openDetail(card);
+      });
+    });
+
+    listContainer.querySelectorAll('.select-checkbox').forEach(cb => {
+      cb.addEventListener('click', (e) => e.stopPropagation());
+      cb.addEventListener('change', () => {
+        const id = String(cb.dataset.id);
+        if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+        updateBulkBar();
       });
     });
 
@@ -1794,6 +1846,423 @@
   // --- Rafraîchissement manuel des prix ---
   const FUNCTION_URL = SUPABASE_URL + '/functions/v1/rapid-worker';
   const GAMES_TO_REFRESH = ['Weiss Schwarz'];
+  // ---------- Import en masse (CSV) ----------
+  const toggleImportBtn = document.getElementById('toggleImportBtn');
+  const importPanel = document.getElementById('importPanel');
+  const importFileInput = document.getElementById('importFileInput');
+  const importTextarea = document.getElementById('importTextarea');
+  const analyzeImportBtn = document.getElementById('analyzeImportBtn');
+  const importResult = document.getElementById('importResult');
+  let pendingImportRows = null;
+
+  toggleImportBtn.addEventListener('click', () => {
+    const isOpen = importPanel.style.display !== 'none';
+    importPanel.style.display = isOpen ? 'none' : 'block';
+  });
+
+  importFileInput.addEventListener('change', () => {
+    const file = importFileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { importTextarea.value = reader.result; };
+    reader.readAsText(file, 'UTF-8');
+  });
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else { field += ch; }
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ',') { row.push(field); field = ''; }
+        else if (ch === '\n' || ch === '\r') {
+          if (ch === '\r' && text[i + 1] === '\n') i++;
+          row.push(field); field = '';
+          if (row.length > 1 || row[0] !== '') rows.push(row);
+          row = [];
+        } else { field += ch; }
+      }
+    }
+    if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+    if (rows.length === 0) return [];
+    const headers = rows[0].map(h => h.trim());
+    return rows.slice(1).filter(r => r.length > 1 || r[0] !== '').map(r => {
+      const obj = {};
+      headers.forEach((h, idx) => { obj[h] = (r[idx] || '').trim(); });
+      return obj;
+    });
+  }
+
+  analyzeImportBtn.addEventListener('click', () => {
+    const text = importTextarea.value.trim();
+    if (!text) {
+      importResult.innerHTML = '<div style="color:var(--red); font-size:12.5px;">Colle ou choisis un fichier CSV d\'abord.</div>';
+      return;
+    }
+    const rows = parseCSV(text).filter(r => r.card_number);
+    if (rows.length === 0) {
+      importResult.innerHTML = '<div style="color:var(--red); font-size:12.5px;">Aucune ligne exploitable trouvée (vérifie les colonnes du CSV).</div>';
+      return;
+    }
+
+    const rowKey = r => `${(r.series || '').trim().toLowerCase()}|${(r.card_number || '').trim().toLowerCase()}|${(r.rarity || '').trim().toLowerCase()}`;
+
+    // 1. Dédoublonner à l'intérieur du fichier lui-même (ex: contenu collé deux fois par erreur)
+    const seenInFile = new Set();
+    let internalDupes = 0;
+    const uniqueRows = [];
+    rows.forEach(r => {
+      const key = rowKey(r);
+      if (seenInFile.has(key)) { internalDupes++; return; }
+      seenInFile.add(key);
+      uniqueRows.push(r);
+    });
+
+    // 2. Comparer ce qui reste à la collection déjà existante
+    const conflicts = [];
+    const fresh = [];
+    uniqueRows.forEach(r => {
+      const existing = cards.find(c =>
+        (c.series || '').trim().toLowerCase() === (r.series || '').trim().toLowerCase() &&
+        (c.cardNumber || '').trim().toLowerCase() === (r.card_number || '').trim().toLowerCase() &&
+        (c.tags || []).some(t => t.trim().toLowerCase() === (r.rarity || '').trim().toLowerCase())
+      );
+      if (existing) conflicts.push({ row: r, existingId: existing.id });
+      else fresh.push(r);
+    });
+
+    pendingImportRows = { fresh, conflicts };
+
+    let html = `<div style="font-size:12.5px; color:var(--text-faint); margin-bottom:10px;">
+      <strong>${rows.length}</strong> lignes lues${internalDupes > 0 ? ` (dont <strong>${internalDupes}</strong> doublons internes au fichier, ignorés automatiquement)` : ''} — <strong>${fresh.length}</strong> nouvelles, <strong>${conflicts.length}</strong> déjà présentes dans ta collection (même série + même numéro + même rareté).
+    </div>`;
+
+    html += `<button type="button" id="importGoBtn" style="background:var(--orange); border:none; border-radius:7px; padding:9px 14px; color:var(--bg); font-weight:600; font-size:12.5px;">Importer les ${fresh.length} nouvelle(s) carte(s)</button>`;
+
+    if (conflicts.length > 0) {
+      html += `<div style="font-size:12px; color:var(--text-fainter); margin:10px 0 6px;">
+        Les ${conflicts.length} carte(s) déjà présente(s) sont ignorées par défaut (ta collection n'est jamais touchée sans que tu le demandes). Si tu veux quand même écraser ces fiches existantes avec les données du fichier :
+      </div>
+      <button type="button" id="importReplaceBtn" style="background:none; border:1px solid var(--border); border-radius:7px; padding:8px 12px; color:var(--text-faint); font-weight:600; font-size:12px;">Remplacer quand même les ${conflicts.length} existantes</button>`;
+    }
+    html += `<div id="importProgress" style="margin-top:10px; font-size:12px; color:var(--text-fainter);"></div>`;
+
+    importResult.innerHTML = html;
+
+    const goBtn = document.getElementById('importGoBtn');
+    if (goBtn) goBtn.addEventListener('click', () => runImport(fresh, []));
+
+    const replaceBtn = document.getElementById('importReplaceBtn');
+    if (replaceBtn) replaceBtn.addEventListener('click', () => {
+      const ok = window.confirm(`Remplacer ${conflicts.length} carte(s) déjà présente(s) dans ta collection par les données du fichier ? Leurs infos actuelles (quantité, possédée ou non, etc.) seront écrasées.`);
+      if (ok) runImport([], conflicts, true);
+    });
+  });
+
+  async function runImport(freshRows, conflictRows, doReplace) {
+    const progressEl = document.getElementById('importProgress');
+    const rate = Number(rateInput.value) || 1.08;
+    const seriesSeen = new Set();
+    let done = 0;
+    const total = freshRows.length + (doReplace ? conflictRows.length : 0);
+
+    function rowToPayload(r) {
+      const priceUsd = parseFloat(r.price_usd);
+      const value = !isNaN(priceUsd) ? Math.round((priceUsd / rate) * 100) / 100 : 0;
+      return {
+        name: r.name || '(Sans nom)',
+        series: r.series || '',
+        cardNumber: r.card_number || '',
+        quantity: 0,
+        condition: 'Neuve',
+        value,
+        imageUrl: r.image_url || null,
+        language: 'JP',
+        tcgProductId: null,
+        tags: r.rarity ? [r.rarity] : [],
+        valueIsManual: true,
+        owned: false
+      };
+    }
+
+    try {
+      for (const r of freshRows) {
+        const payload = rowToPayload(r);
+        const saved = await addCardToDb(payload);
+        cards.unshift({
+          id: saved.id, name: saved.name, series: saved.series || '', cardNumber: saved.card_number || '',
+          quantity: saved.quantity, condition: saved.condition, value: saved.value,
+          imageUrl: saved.image_url || '', language: saved.language || 'JP',
+          tcgProductId: saved.tcg_product_id || null, tags: saved.tags || [],
+          valueIsManual: saved.value_is_manual !== false, owned: saved.owned !== false
+        });
+        if (r.series && !seriesSeen.has(r.series)) { seriesSeen.add(r.series); saveCustomSeries(r.series); }
+        done++;
+        progressEl.textContent = `Import en cours... ${done}/${total}`;
+      }
+
+      if (doReplace) {
+        for (const c of conflictRows) {
+          const payload = rowToPayload(c.row);
+          const saved = await updateCardInDb(c.existingId, payload);
+          const idx = cards.findIndex(x => String(x.id) === String(c.existingId));
+          if (idx !== -1) {
+            cards[idx] = Object.assign({}, cards[idx], {
+              name: saved.name, cardNumber: saved.card_number, value: saved.value,
+              imageUrl: saved.image_url || '', tags: saved.tags || [], owned: saved.owned !== false,
+              quantity: saved.quantity
+            });
+          }
+          if (c.row.series && !seriesSeen.has(c.row.series)) { seriesSeen.add(c.row.series); saveCustomSeries(c.row.series); }
+          done++;
+          progressEl.textContent = `Import en cours... ${done}/${total}`;
+        }
+      }
+
+      progressEl.textContent = `Terminé : ${done} carte(s) importée(s) ✓`;
+      importTextarea.value = '';
+      importFileInput.value = '';
+      render();
+    } catch (e) {
+      progressEl.textContent = "Erreur pendant l'import : " + e.message;
+    }
+  }
+
+  // ---------- Sélection multiple & actions groupées ----------
+  const dedupeBtn = document.getElementById('dedupeBtn');
+  const dedupeResult = document.getElementById('dedupeResult');
+
+  function findDuplicateGroups() {
+    const groups = {};
+    cards.forEach(c => {
+      const key = `${(c.series || '').trim().toLowerCase()}|${(c.cardNumber || '').trim().toLowerCase()}|${(c.tags || []).slice().sort().join(',').toLowerCase()}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    });
+    return Object.values(groups).filter(g => g.length > 1);
+  }
+
+  dedupeBtn.addEventListener('click', () => {
+    const groups = findDuplicateGroups();
+    if (groups.length === 0) {
+      dedupeResult.innerHTML = '<div style="font-size:12.5px; color:var(--text-fainter);">Aucun doublon trouvé (même série + même numéro + mêmes tags).</div>';
+      return;
+    }
+    const totalExtra = groups.reduce((sum, g) => sum + (g.length - 1), 0);
+    dedupeResult.innerHTML = `
+      <div style="background:var(--bg-panel); border:1px solid var(--orange); border-radius:10px; padding:12px; font-size:12.5px;">
+        <div style="margin-bottom:8px;"><strong>${groups.length}</strong> carte(s) en double trouvée(s), soit <strong>${totalExtra}</strong> fiche(s) en trop à supprimer.
+        Pour chaque groupe, la fiche possédée (ou la plus complète) est conservée — les quantités possédées sont additionnées, les autres fiches sont supprimées.</div>
+        <button type="button" id="dedupeConfirmBtn" style="background:var(--orange); border:none; border-radius:7px; padding:9px 14px; color:var(--bg); font-weight:600; font-size:12.5px;">Nettoyer maintenant</button>
+        <div id="dedupeProgress" style="margin-top:8px; font-size:12px; color:var(--text-fainter);"></div>
+      </div>`;
+
+    document.getElementById('dedupeConfirmBtn').addEventListener('click', async () => {
+      const ok = window.confirm(`Supprimer ${totalExtra} fiche(s) en double ? Cette action est irréversible.`);
+      if (!ok) return;
+      const progressEl = document.getElementById('dedupeProgress');
+      const confirmBtn = document.getElementById('dedupeConfirmBtn');
+      confirmBtn.disabled = true;
+      let done = 0;
+
+      try {
+        for (const group of groups) {
+          // Choisir la fiche à garder : possédée en priorité, sinon la 1ère du groupe
+          const owned = group.filter(c => c.owned !== false);
+          const survivor = owned.length > 0 ? owned[0] : group[0];
+          const totalQty = owned.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
+          const toDelete = group.filter(c => c.id !== survivor.id);
+
+          if (owned.length > 0 && totalQty !== survivor.quantity) {
+            const saved = await updateCardInDb(survivor.id, {
+              name: survivor.name, series: survivor.series, cardNumber: survivor.cardNumber,
+              quantity: totalQty, condition: survivor.condition, value: survivor.value,
+              imageUrl: survivor.imageUrl, language: survivor.language,
+              tcgProductId: survivor.tcgProductId, tags: survivor.tags,
+              valueIsManual: survivor.valueIsManual, owned: true
+            });
+            const idx = cards.findIndex(c => String(c.id) === String(survivor.id));
+            if (idx !== -1) cards[idx] = Object.assign({}, cards[idx], { quantity: saved.quantity, owned: saved.owned !== false });
+          }
+
+          for (const c of toDelete) {
+            await deleteCardFromDb(c.id);
+            cards = cards.filter(x => String(x.id) !== String(c.id));
+            done++;
+            progressEl.textContent = `Nettoyage... ${done}/${totalExtra}`;
+          }
+        }
+        progressEl.textContent = `${done} fiche(s) en double supprimée(s) ✓`;
+        render();
+      } catch (e) {
+        progressEl.textContent = "Erreur : " + e.message;
+      } finally {
+        confirmBtn.disabled = false;
+      }
+    });
+  });
+
+  const selectionModeBtn = document.getElementById('selectionModeBtn');
+  const bulkActionsBar = document.getElementById('bulkActionsBar');
+  const bulkCountEl = document.getElementById('bulkCount');
+  const bulkSeriesInput = document.getElementById('bulkSeriesInput');
+  const bulkSeriesBtn = document.getElementById('bulkSeriesBtn');
+  const bulkTagInput = document.getElementById('bulkTagInput');
+  const bulkTagBtn = document.getElementById('bulkTagBtn');
+  const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+  const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+  const bulkProgress = document.getElementById('bulkProgress');
+
+  function updateBulkBar() {
+    bulkCountEl.textContent = selectedIds.size;
+    bulkActionsBar.style.display = selectedIds.size > 0 ? 'block' : 'none';
+  }
+
+  selectionModeBtn.addEventListener('click', () => {
+    selectionMode = !selectionMode;
+    selectedIds.clear();
+    selectionModeBtn.style.background = selectionMode ? 'var(--orange)' : 'none';
+    selectionModeBtn.style.color = selectionMode ? 'var(--bg)' : 'var(--text-faint)';
+    selectionModeBtn.style.border = selectionMode ? 'none' : '1px solid var(--border)';
+    selectionModeBtn.textContent = selectionMode ? 'Quitter la sélection' : 'Sélection multiple';
+    updateBulkBar();
+    render();
+  });
+
+  bulkDeleteBtn.addEventListener('click', async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    const ok = window.confirm(`Supprimer définitivement ${count} carte(s) sélectionnée(s) ? Cette action est irréversible et effacera complètement leurs fiches.`);
+    if (!ok) return;
+
+    bulkDeleteBtn.disabled = true;
+    let done = 0;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        await deleteCardFromDb(id);
+        cards = cards.filter(c => String(c.id) !== id);
+        done++;
+        bulkProgress.textContent = `Suppression... ${done}/${ids.length}`;
+      }
+      bulkProgress.textContent = `${done} carte(s) supprimée(s) ✓`;
+      selectedIds.clear();
+      selectionMode = false;
+      selectionModeBtn.textContent = 'Sélection multiple';
+      selectionModeBtn.style.background = 'none';
+      selectionModeBtn.style.color = 'var(--text-faint)';
+      selectionModeBtn.style.border = '1px solid var(--border)';
+      updateBulkBar();
+      render();
+    } catch (e) {
+      bulkProgress.textContent = "Erreur : " + e.message;
+    } finally {
+      bulkDeleteBtn.disabled = false;
+    }
+  });
+
+  bulkCancelBtn.addEventListener('click', () => {
+    selectedIds.clear();
+    updateBulkBar();
+    render();
+  });
+
+  bulkSeriesBtn.addEventListener('click', async () => {
+    const newSeries = bulkSeriesInput.value.trim();
+    if (!newSeries) {
+      bulkProgress.textContent = 'Indique un nom de série.';
+      return;
+    }
+    const ok = window.confirm(`Déplacer ${selectedIds.size} carte(s) vers la série "${newSeries}" ? Cette action modifie la série de toutes les cartes sélectionnées.`);
+    if (!ok) return;
+
+    bulkSeriesBtn.disabled = true;
+    let done = 0;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        const card = cards.find(c => String(c.id) === id);
+        if (!card) continue;
+        const saved = await updateCardInDb(card.id, {
+          name: card.name, series: newSeries, cardNumber: card.cardNumber,
+          quantity: card.quantity, condition: card.condition, value: card.value,
+          imageUrl: card.imageUrl, language: card.language,
+          tcgProductId: card.tcgProductId, tags: card.tags,
+          valueIsManual: card.valueIsManual, owned: card.owned
+        });
+        const idx = cards.findIndex(c2 => String(c2.id) === id);
+        if (idx !== -1) cards[idx] = Object.assign({}, cards[idx], { series: saved.series || newSeries });
+        done++;
+        bulkProgress.textContent = `Mise à jour... ${done}/${ids.length}`;
+      }
+      saveCustomSeries(newSeries);
+      bulkProgress.textContent = `${done} carte(s) déplacée(s) ✓`;
+      bulkSeriesInput.value = '';
+      selectedIds.clear();
+      selectionMode = false;
+      selectionModeBtn.textContent = 'Sélection multiple';
+      selectionModeBtn.style.background = 'none';
+      selectionModeBtn.style.color = 'var(--text-faint)';
+      selectionModeBtn.style.border = '1px solid var(--border)';
+      updateBulkBar();
+      render();
+    } catch (e) {
+      bulkProgress.textContent = "Erreur : " + e.message;
+    } finally {
+      bulkSeriesBtn.disabled = false;
+    }
+  });
+
+  bulkTagBtn.addEventListener('click', async () => {
+    const newTag = bulkTagInput.value.trim();
+    if (!newTag) {
+      bulkProgress.textContent = 'Indique un tag à ajouter.';
+      return;
+    }
+    bulkTagBtn.disabled = true;
+    let done = 0;
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        const card = cards.find(c => String(c.id) === id);
+        if (!card) continue;
+        const tags = Array.isArray(card.tags) ? card.tags.slice() : [];
+        if (!tags.includes(newTag)) tags.push(newTag);
+        const saved = await updateCardInDb(card.id, {
+          name: card.name, series: card.series, cardNumber: card.cardNumber,
+          quantity: card.quantity, condition: card.condition, value: card.value,
+          imageUrl: card.imageUrl, language: card.language,
+          tcgProductId: card.tcgProductId, tags: tags,
+          valueIsManual: card.valueIsManual, owned: card.owned
+        });
+        const idx = cards.findIndex(c2 => String(c2.id) === id);
+        if (idx !== -1) cards[idx] = Object.assign({}, cards[idx], { tags: saved.tags || tags });
+        done++;
+        bulkProgress.textContent = `Mise à jour... ${done}/${ids.length}`;
+      }
+      bulkProgress.textContent = `Tag ajouté à ${done} carte(s) ✓`;
+      bulkTagInput.value = '';
+      selectedIds.clear();
+      selectionMode = false;
+      selectionModeBtn.textContent = 'Sélection multiple';
+      selectionModeBtn.style.background = 'none';
+      selectionModeBtn.style.color = 'var(--text-faint)';
+      selectionModeBtn.style.border = '1px solid var(--border)';
+      updateBulkBar();
+      render();
+    } catch (e) {
+      bulkProgress.textContent = "Erreur : " + e.message;
+    } finally {
+      bulkTagBtn.disabled = false;
+    }
+  });
+
   const refreshPricesBtn = document.getElementById('refreshPricesBtn');
   const refreshPricesLabel = document.getElementById('refreshPricesLabel');
 
